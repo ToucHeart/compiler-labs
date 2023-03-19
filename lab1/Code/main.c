@@ -1,25 +1,20 @@
 #include <stdio.h>
-extern int yylex(void);
-extern void yyrestart(FILE *input_file);
-
+extern int yyparse();
+extern void yyrestart(FILE *);
 int main(int argc, char **argv)
 {
-    if (argc < 2)
+    if (argc <= 1)
     {
-        yylex();
-        return 0;
+        yyparse();
+        return 1;
     }
-    for (int i = 1; i < argc; i++)
+    FILE *f = fopen(argv[1], "r");
+    if (!f)
     {
-        FILE *f = fopen(argv[i], "r");
-        if (!f)
-        {
-            perror(argv[i]);
-            return 1;
-        }
-        yyrestart(f);
-        yylex();
-        fclose(f);
+        perror(argv[1]);
+        return 1;
     }
+    yyrestart(f);
+    yyparse();
     return 0;
 }

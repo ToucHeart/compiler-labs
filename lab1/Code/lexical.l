@@ -1,26 +1,27 @@
 %{
+    #include "syntax.tab.h"
 %}
 
 %option yylineno
 
-newline [\n\r]
-ws [ \t]
+NEWLINE [\n\r]+
+WS [ \t]+
 STRUCT  struct
 RETURN  return
 IF  if
 ELSE  else
 WHILE  while
-digit [0-9]
-letter [_a-zA-Z]
-lettersec [0-9_a-zA-Z]
+DIGIT [0-9]
+LETTER [_a-zA-Z]
+LETTERSEC [0-9_a-zA-Z]
 RELOP 	>|<|>=|<=|==|!=
 TYPE int|float
 SEMI  ";"
 COMMA  ","
 ASSIGNOP "="
-PLUS  "+"
-MINUS  "-"
-STAR  "*"
+ADD  "+"
+SUB  "-"
+MUL  "*"
 DIV  "/"
 AND "&&"
 OR "||"
@@ -32,28 +33,31 @@ LB "["
 RB "]"
 LC "{"
 RC "}"
-ID {letter}{lettersec}*
+ID {LETTER}{LETTERSEC}*
 INT 0|[1-9]+[0-9]*
-FLOAT {digit}+"."{digit}+|{digit}*"."{digit}+[eE][+-]?{digit}+|{digit}+"."{digit}*[eE][+-]?{digit}+
+FLOAT {DIGIT}+"."{DIGIT}+|{DIGIT}*"."{DIGIT}+[eE][+-]?{DIGIT}+|{DIGIT}+"."{DIGIT}*[eE][+-]?{DIGIT}+
 %%
-{letter}+ {printf("letter %s\n",yytext);}
-{digit}+ {printf("digit %s\n",yytext);}
-{ws}+ {}
-{RELOP} {printf("RELOP %s\n",yytext);}
-{ASSIGNOP} {printf("ASSIGNOP %s\n",yytext);}
-{SEMI} {printf("SEMI %s\n",yytext);}
-{newline} {}
-{COMMA} {printf("COMMA %s\n",yytext);}
-{DOT} {printf("DOT %s\n",yytext);}
-{LB} {printf("LB %s\n",yytext);}
-{RB} {printf("RB %s\n",yytext);}
-{LP} {printf("LP %s\n",yytext);}
-{RP} {printf("RP %s\n",yytext);}
-{LC} {printf("LC %s\n",yytext);}
-{RC} {printf("RC %s\n",yytext);}
-{PLUS} { printf("PLUS %s\n",yytext); }
-{MINUS} { printf("SUB %s\n",yytext); }
-{AND} { printf("AND %s\n",yytext); }
-{OR} { printf("OR %s\n",yytext); }
+{ID} {return ID;}
+{INT} {yylval.type_int = atoi(yytext); return INT;}
+{FLOAT} {yylval.type_float = atof(yytext); return FLOAT;}
+{ADD} {return ADD;}
+{SUB} {return SUB;}
+{MUL} {return MUL;}
+{DIV} {return DIV;}
+{AND} {return AND;}
+{OR} {return OR; }
+{WS} {return WS;}
+{RELOP} {return RELOP;}
+{ASSIGNOP} {return ASSIGNOP;}
+{SEMI} {return SEMI;}
+{NEWLINE} {}
+{COMMA} {return COMMA;}
+{DOT} {return DOT;}
+{LB} {return LB;}
+{RB} {return RB;}
+{LP} {return LP;}
+{RP} {return RP;}
+{LC} {return LC;}
+{RC} {return RC;}
 . {printf("Error type A at Line %d: Mysterious characters \'%s\'\n",yylineno, yytext);}
 %%
