@@ -13,11 +13,11 @@ WHILE  while
 digit [0-9]
 letter [_a-zA-Z]
 lettersec [0-9_a-zA-Z]
+RELOP 	>|<|>=|<=|==|!=
 TYPE int|float
 SEMI  ";"
 COMMA  ","
 ASSIGNOP "="
-RELOP  >|<|>=|<=|==|!=
 PLUS  "+"
 MINUS  "-"
 STAR  "*"
@@ -38,10 +38,15 @@ FLOAT {digit}+"."{digit}+|{digit}*"."{digit}+[eE][+-]?{digit}+|{digit}+"."{digit
 %%
 {letter}+ {printf("letter %s\n",yytext);}
 {digit}+ {printf("digit %s\n",yytext);}
-{ws}+ { printf("ws %s\n",yytext);}
+{ws}+ {}
+{RELOP} {printf("RELOP %s\n",yytext);}
 {ASSIGNOP} {printf("ASSIGNOP %s\n",yytext);}
 {SEMI} {printf("SEMI %s\n",yytext);}
-{newline} {printf("newline %s\n",yytext);}
+{newline} {}
+{COMMA} {printf("COMMA %s\n",yytext);}
+{DOT} {printf("DOT %s\n",yytext);}
+{LB} {printf("LB %s\n",yytext);}
+{RB} {printf("RB %s\n",yytext);}
 {LP} {printf("LP %s\n",yytext);}
 {RP} {printf("RP %s\n",yytext);}
 {LC} {printf("LC %s\n",yytext);}
