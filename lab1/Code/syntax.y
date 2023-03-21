@@ -39,6 +39,7 @@ int yyerror(char* msg)
 %type <nodePtr> DefList Def Dec DecList                //  Local Definitions
 %type <nodePtr> Exp Args                               //  Expressions
 
+//越往下优先级越高
 %right ASSIGNOP
 %left OR
 %left AND
@@ -55,8 +56,8 @@ int yyerror(char* msg)
 %%
 Program : ExtDefList  {}
 ;
-ExtDefList  :  ExtDef   {}
-| ExtDefList            {}
+ExtDefList  :  ExtDef  ExtDefList   {}
+|                                   {}
 ;
 ExtDef : Specifier ExtDecList SEMI  {}
 | Specifier SEMI                    {}
