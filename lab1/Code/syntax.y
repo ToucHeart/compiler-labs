@@ -2,39 +2,42 @@
 %{
 #include "lex.yy.c"
 #include <stdio.h>
+int yyerror(char* msg) 
+{
+    fprintf(stderr, "Error type B at Line %d: %s\n",yylineno,msg);
+}
 %}
 
 %union{
-    Node* node; 
+    Node* nodePtr; 
 }
 
-// tokens
+// terminals/tokens
+%token <nodePtr> INT
+%token <nodePtr> FLOAT
+%token <nodePtr> ID
+%token <nodePtr> TYPE
+%token <nodePtr> COMMA
+%token <nodePtr> DOT
+%token <nodePtr> SEMI
+%token <nodePtr> RELOP
+%token <nodePtr> ASSIGNOP
+%token <nodePtr> ADD SUB MUL DIV
+%token <nodePtr> AND OR NOT 
+%token <nodePtr> LP RP LB RB LC RC
+%token <nodePtr> IF
+%token <nodePtr> ELSE
+%token <nodePtr> WHILE
+%token <nodePtr> STRUCT
+%token <nodePtr> RETURN
 
-%token <node> INT
-%token <node> FLOAT
-%token <node> ID
-%token <node> TYPE
-%token <node> COMMA
-%token <node> DOT
-%token <node> SEMI
-%token <node> RELOP
-%token <node> ASSIGNOP
-%token <node> ADD SUB MUL DIV
-%token <node> AND OR NOT 
-%token <node> LP RP LB RB LC RC
-%token <node> IF
-%token <node> ELSE
-%token <node> WHILE
-%token <node> STRUCT
-%token <node> RETURN
-
-// non-terminals
-%type <node> Program ExtDefList ExtDef ExtDecList   //  High-level Definitions
-%type <node> Specifier StructSpecifier OptTag Tag   //  Specifiers
-%type <node> VarDec FunDec VarList ParamDec         //  Declarators
-%type <node> CompSt StmtList Stmt                   //  Statements
-%type <node> DefList Def Dec DecList                //  Local Definitions
-%type <node> Exp Args                               //  Expressions
+//not terminals,
+%type <nodePtr> Program ExtDefList ExtDef ExtDecList   //  High-level Definitions
+%type <nodePtr> Specifier StructSpecifier OptTag Tag   //  Specifiers
+%type <nodePtr> VarDec FunDec VarList ParamDec         //  Declarators
+%type <nodePtr> CompSt StmtList Stmt                   //  Statements
+%type <nodePtr> DefList Def Dec DecList                //  Local Definitions
+%type <nodePtr> Exp Args                               //  Expressions
 
 %right ASSIGNOP
 %left OR
