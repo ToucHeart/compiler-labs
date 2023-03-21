@@ -100,7 +100,7 @@ Stmt : Exp SEMI                  {}
 | WHILE LP Exp RP Stmt           {}
 ;
 DefList : Def DefList            {}
-|  {}
+|                                {}
 ;
 Def : Specifier DecList SEMI     {}
 ;
