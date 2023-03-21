@@ -1,37 +1,131 @@
+%locations
 %{
 #include "lex.yy.c"
 #include <stdio.h>
 %}
 
-/* declared types */
-%union {
-    int type_int;
-    float type_float;
-    double type_double;
+%union{
+    Node* node; 
 }
 
-/* declared tokens */
-%token <type_int> INT
-%token <type_float> FLOAT
-%token ADD SUB MUL DIV ID AND OR WS RELOP ASSIGNOP SEMI NEWLINE COMMA DOT LB LC LP RB RC RP
+// tokens
 
-/* declared non-terminals */
-%type <type_double> Exp Factor Term
+%token <node> INT
+%token <node> FLOAT
+%token <node> ID
+%token <node> TYPE
+%token <node> COMMA
+%token <node> DOT
+%token <node> SEMI
+%token <node> RELOP
+%token <node> ASSIGNOP
+%token <node> ADD SUB MUL DIV
+%token <node> AND OR NOT 
+%token <node> LP RP LB RB LC RC
+%token <node> IF
+%token <node> ELSE
+%token <node> WHILE
+%token <node> STRUCT
+%token <node> RETURN
+
+// non-terminals
+%type <node> Program ExtDefList ExtDef ExtDecList   //  High-level Definitions
+%type <node> Specifier StructSpecifier OptTag Tag   //  Specifiers
+%type <node> VarDec FunDec VarList ParamDec         //  Declarators
+%type <node> CompSt StmtList Stmt                   //  Statements
+%type <node> DefList Def Dec DecList                //  Local Definitions
+%type <node> Exp Args                               //  Expressions
+
+%right ASSIGNOP
+%left OR
+%left AND
+%left RELOP
+%left ADD SUB
+%left MUL DIV
+%right NOT
+%left DOT
+%left LB RB
+%left LP RP
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
 
 %%
-Calc : /* empty */
-| Exp { printf("= %lf\n", $1); }
+Program : ExtDefList  {}
 ;
-Exp : Factor
-| Exp ADD Factor { $$ = $1 + $3; }
-| Exp SUB Factor { $$ = $1 - $3; }
+ExtDefList  :  ExtDef   {}
+| ExtDefList            {}
 ;
-Factor : Term
-| Factor MUL Term { $$ = $1 * $3; }
-| Factor DIV Term { $$ = $1 / $3; }
+ExtDef : Specifier ExtDecList SEMI  {}
+| Specifier SEMI                    {}
+| Specifier FunDec CompSt           {}
 ;
-Term : INT { $$ = $1; }
-| FLOAT { $$ = $1; }
+ExtDecList :    VarDec              {}
+| VarDec COMMA ExtDecList           {}
 ;
-
+Specifier : TYPE                    {}
+| StructSpecifier                   {}
+;
+StructSpecifier : STRUCT OptTag LC DefList RC  {}
+| STRUCT Tag                                   {}
+;
+OptTag : ID {}
+|           {}
+;
+Tag : ID    {}
+;
+VarDec : ID  {}
+| VarDec LB INT RB  {}
+;
+FunDec : ID LP VarList RP  {}
+| ID LP RP     {}
+;
+VarList : ParamDec COMMA VarList  {}
+| ParamDec   {}
+;
+ParamDec : Specifier VarDec   {}
+;
+CompSt : LC DefList StmtList RC  {}
+StmtList : Stmt StmtList         {}
+|  {}
+;
+Stmt : Exp SEMI                  {}
+| CompSt                         {}
+| RETURN Exp SEMI                {}
+| IF LP Exp RP Stmt              {}
+| IF LP Exp RP Stmt ELSE Stmt    {}
+| WHILE LP Exp RP Stmt           {}
+;
+DefList : Def DefList            {}
+|  {}
+;
+Def : Specifier DecList SEMI     {}
+;
+DecList : Dec                    {}
+| Dec COMMA DecList              {}
+;
+Dec : VarDec                     {}
+| VarDec ASSIGNOP Exp            {}
+;
+Exp : Exp ASSIGNOP Exp           {}
+| Exp AND Exp                    {}
+| Exp OR Exp                     {}
+| Exp RELOP Exp                  {}
+| Exp ADD Exp                   {}
+| Exp SUB Exp                  {}
+| Exp MUL Exp                   {}
+| Exp DIV Exp                    {}
+| LP Exp RP                      {}           
+| SUB Exp                      {}
+| NOT Exp                        {}       
+| ID LP Args RP                  {}   
+| ID LP RP                       {}               
+| Exp LB Exp RB                  {}       
+| Exp DOT ID                     {}   
+| ID                             {}   
+| INT                            {}           
+| FLOAT                          {}
+;
+Args : Exp COMMA Args            {}
+| Exp                            {}
+;
 %%
