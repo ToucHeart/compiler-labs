@@ -2,6 +2,7 @@
 %{
 #include "lex.yy.c"
 #include <stdio.h>
+extern Node *root;
 int yyerror(char* msg) 
 {
     fprintf(stderr, "Error type B at Line %d: %s\n",yylineno,msg);
@@ -56,7 +57,7 @@ int yyerror(char* msg)
 %%
 Program : ExtDefList  {}
 ;
-ExtDefList  :  ExtDef  ExtDefList   {}
+ExtDefList  :  ExtDef  ExtDefList   {$$=getSy}
 |                                   {}
 ;
 ExtDef : Specifier ExtDecList SEMI  {}

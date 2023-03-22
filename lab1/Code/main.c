@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "Node.h"
 extern int yyparse();
 extern void yyrestart(FILE *);
 extern int yydebug;
@@ -16,7 +17,8 @@ int main(int argc, char **argv)
         return 1;
     }
     yyrestart(f);
-    // yydebug = 1;
     yyparse();
+    freeMemory();
+    printTree();
     return 0;
 }
