@@ -26,9 +26,9 @@ TYPE int|float
 SEMI  ";"
 COMMA  ","
 ASSIGNOP "="
-ADD  "+"
-SUB  "-"
-MUL  "*"
+PLUS  "+"
+MINUS  "-"
+STAR  "*"
 DIV  "/"
 AND "&&"
 OR "||"
@@ -48,14 +48,14 @@ FLOAT {DIGIT}+"."{DIGIT}+|{DIGIT}*"."{DIGIT}+[eE][+-]?{DIGIT}+|{DIGIT}+"."{DIGIT
 {FLOAT} {yylval.nodePtr=getLexicalUnitNode(yylineno,"FLOAT",TOKEN_TYPE_FLOAT,yytext); return FLOAT;}
 {STRUCT} {yylval.nodePtr=getLexicalUnitNode(yylineno,"STRUCT",TOKEN_TYPE_OTHER,yytext);  return STRUCT;}
 {RETURN} {yylval.nodePtr=getLexicalUnitNode(yylineno,"RETURN",TOKEN_TYPE_OTHER,yytext); return RETURN;}
-{TYPE} {yylval.nodePtr=getLexicalUnitNode(yylineno,"TYPE",TOKEN_TYPE_OTHER,yytext);  return TYPE;}
+{TYPE} {yylval.nodePtr=getLexicalUnitNode(yylineno,"TYPE",TOKEN_TYPE_TYPE,yytext);  return TYPE;}
 {IF} {yylval.nodePtr=getLexicalUnitNode(yylineno,"IF",TOKEN_TYPE_OTHER,yytext);  return IF;}
 {ELSE} {yylval.nodePtr=getLexicalUnitNode(yylineno,"ELSE",TOKEN_TYPE_OTHER,yytext);  return ELSE;}
 {WHILE} {yylval.nodePtr=getLexicalUnitNode(yylineno,"WHILE",TOKEN_TYPE_OTHER,yytext); return WHILE;}
 {ID} {yylval.nodePtr=getLexicalUnitNode(yylineno,"ID",TOKEN_TYPE_ID,yytext);  return ID;}
-{ADD} {yylval.nodePtr=getLexicalUnitNode(yylineno,"ADD",TOKEN_TYPE_OTHER,yytext); return ADD;}
-{SUB} {yylval.nodePtr=getLexicalUnitNode(yylineno,"SUB",TOKEN_TYPE_OTHER,yytext);return SUB;}
-{MUL} {yylval.nodePtr=getLexicalUnitNode(yylineno,"MUL",TOKEN_TYPE_OTHER,yytext);  return MUL;}
+{PLUS} {yylval.nodePtr=getLexicalUnitNode(yylineno,"PLUS",TOKEN_TYPE_OTHER,yytext); return PLUS;}
+{MINUS} {yylval.nodePtr=getLexicalUnitNode(yylineno,"MINUS",TOKEN_TYPE_OTHER,yytext);return MINUS;}
+{STAR} {yylval.nodePtr=getLexicalUnitNode(yylineno,"STAR",TOKEN_TYPE_OTHER,yytext);  return STAR;}
 {DIV} {yylval.nodePtr=getLexicalUnitNode(yylineno,"DIV",TOKEN_TYPE_OTHER,yytext);  return DIV;}
 {AND} {yylval.nodePtr=getLexicalUnitNode(yylineno,"AND",TOKEN_TYPE_OTHER,yytext);  return AND;}
 {OR} {yylval.nodePtr=getLexicalUnitNode(yylineno,"OR",TOKEN_TYPE_OTHER,yytext);  return OR; }

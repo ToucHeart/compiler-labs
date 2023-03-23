@@ -1,7 +1,6 @@
 %locations
 %{
 #include "lex.yy.c"
-#include <stdio.h>
 extern Node *root;
 extern bool hasError;
 int yyerror(char* msg) 
@@ -30,7 +29,7 @@ int yyerror(char* msg)
 %token <nodePtr> SEMI
 %token <nodePtr> RELOP
 %token <nodePtr> ASSIGNOP
-%token <nodePtr> ADD SUB MUL DIV
+%token <nodePtr> PLUS MINUS STAR DIV
 %token <nodePtr> AND OR NOT 
 %token <nodePtr> LP RP LB RB LC RC
 
@@ -47,8 +46,8 @@ int yyerror(char* msg)
 %left OR
 %left AND
 %left RELOP
-%left ADD SUB
-%left MUL DIV
+%left PLUS MINUS
+%left STAR DIV
 %right NOT
 %left DOT
 %left LB RB
@@ -99,7 +98,7 @@ StmtList : Stmt StmtList         {$$ = getSyntaxUnitNode(@$.first_line,"StmtList
 Stmt : Exp SEMI                  {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,2,$1,$2);}
 | CompSt                         {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,1,$1);}
 | RETURN Exp SEMI                {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,3,$1,$2,$3);}
-| IF LP Exp RP Stmt              {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,5,$1,$2,$3,$4,$5);}
+| IF LP Exp RP Stmt %prec LOWER_THAN_ELSE  {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,5,$1,$2,$3,$4,$5);}
 | IF LP Exp RP Stmt ELSE Stmt    {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,7,$1,$2,$3,$4,$5,$6,$7);}
 | WHILE LP Exp RP Stmt           {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,5,$1,$2,$3,$4,$5);}
 ;
@@ -118,12 +117,12 @@ Exp : Exp ASSIGNOP Exp           {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT
 | Exp AND Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
 | Exp OR Exp                     {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
 | Exp RELOP Exp                  {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
-| Exp ADD Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
-| Exp SUB Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
-| Exp MUL Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp PLUS Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp MINUS Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp STAR Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
 | Exp DIV Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
 | LP Exp RP                      {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}           
-| SUB Exp                        {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,2,$1,$2);}
+| MINUS Exp                        {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,2,$1,$2);}
 | NOT Exp                        {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,2,$1,$2);}       
 | ID LP Args RP                  {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,4,$1,$2,$3,$4);}   
 | ID LP RP                       {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}               
