@@ -1,14 +1,8 @@
-int;	
 int f()
 {
-}
-int main()
+	int a;
+	return a;
+	
+int main() 
 {
-	int i = 1;
-	int j = 2;
-	c=i*j;
 }
-struct A
-{
-
-};

@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include "Node.h"
+
+bool hasError = false;
 extern int yyparse();
 extern void yyrestart(FILE *);
 extern int yydebug;
+
 int main(int argc, char **argv)
 {
     if (argc <= 1)
@@ -18,7 +21,8 @@ int main(int argc, char **argv)
     }
     yyrestart(f);
     yyparse();
+    if (!hasError)
+        printTree();
     freeMemory();
-    printTree();
     return 0;
 }

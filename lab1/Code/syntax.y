@@ -3,8 +3,10 @@
 #include "lex.yy.c"
 #include <stdio.h>
 extern Node *root;
+extern bool hasError;
 int yyerror(char* msg) 
 {
+    hasError=true;
     fprintf(stderr, "Error type B at Line %d: %s\n",yylineno,msg);
 }
 %}
@@ -17,6 +19,11 @@ int yyerror(char* msg)
 %token <nodePtr> INT
 %token <nodePtr> FLOAT
 %token <nodePtr> ID
+%token <nodePtr> IF
+%token <nodePtr> ELSE
+%token <nodePtr> WHILE
+%token <nodePtr> RETURN
+%token <nodePtr> STRUCT
 %token <nodePtr> TYPE
 %token <nodePtr> COMMA
 %token <nodePtr> DOT
@@ -26,11 +33,6 @@ int yyerror(char* msg)
 %token <nodePtr> ADD SUB MUL DIV
 %token <nodePtr> AND OR NOT 
 %token <nodePtr> LP RP LB RB LC RC
-%token <nodePtr> IF
-%token <nodePtr> ELSE
-%token <nodePtr> WHILE
-%token <nodePtr> STRUCT
-%token <nodePtr> RETURN
 
 //not terminals,
 %type <nodePtr> Program ExtDefList ExtDef ExtDecList   //  High-level Definitions
@@ -55,82 +57,83 @@ int yyerror(char* msg)
 %nonassoc ELSE
 
 %%
-Program : ExtDefList  {}
+Program : ExtDefList  {root = getSyntaxUnitNode(@$.first_line, "Program",NOT_TOKEN,1, $1);}
 ;
-ExtDefList  :  ExtDef  ExtDefList   {$$=getSy}
-|                                   {}
+ExtDefList  :  ExtDef  ExtDefList   {$$ = getSyntaxUnitNode(@$.first_line, "ExtDefList",NOT_TOKEN,2, $1,$2);}
+|                                   {$$ = NULL;}
 ;
-ExtDef : Specifier ExtDecList SEMI  {}
-| Specifier SEMI                    {}
-| Specifier FunDec CompSt           {}
+ExtDef : Specifier ExtDecList SEMI  {$$ = getSyntaxUnitNode(@$.first_line, "ExtDef",NOT_TOKEN,3, $1,$2,$3);}
+| Specifier SEMI                    {$$ = getSyntaxUnitNode(@$.first_line, "ExtDef",NOT_TOKEN,2, $1,$2);}
+| Specifier FunDec CompSt           {$$ = getSyntaxUnitNode(@$.first_line, "ExtDef",NOT_TOKEN,3, $1,$2,$3);}
 ;
-ExtDecList :    VarDec              {}
-| VarDec COMMA ExtDecList           {}
+ExtDecList :    VarDec              {$$ = getSyntaxUnitNode(@$.first_line, "ExtDecList",NOT_TOKEN,1, $1);}
+| VarDec COMMA ExtDecList           {$$ = getSyntaxUnitNode(@$.first_line, "ExtDecList",NOT_TOKEN,3, $1,$2,$3);}
 ;
-Specifier : TYPE                    {}
-| StructSpecifier                   {}
+Specifier : TYPE                    {$$ = getSyntaxUnitNode(@$.first_line, "Specifier",NOT_TOKEN,1,$1);}
+| StructSpecifier                   {$$ = getSyntaxUnitNode(@$.first_line, "Specifier",NOT_TOKEN,1,$1);}
 ;
-StructSpecifier : STRUCT OptTag LC DefList RC  {}
-| STRUCT Tag                                   {}
+StructSpecifier : STRUCT OptTag LC DefList RC  {$$ = getSyntaxUnitNode(@$.first_line,"StructSpecifier",NOT_TOKEN,5,$1,$2,$3,$4,$5);}
+| STRUCT Tag                                   {$$ = getSyntaxUnitNode(@$.first_line,"StructSpecifier",NOT_TOKEN,2,$1,$2);}
 ;
-OptTag : ID {}
-|           {}
+OptTag : ID {$$ = getSyntaxUnitNode(@$.first_line,"OptTag",NOT_TOKEN,1,$1);}
+|           {$$ = NULL;}
 ;
-Tag : ID    {}
+Tag : ID    {$$ = getSyntaxUnitNode(@$.first_line,"Tag",NOT_TOKEN,1,$1);}
 ;
-VarDec : ID  {}
-| VarDec LB INT RB  {}
+VarDec : ID                 {$$ = getSyntaxUnitNode(@$.first_line,"VarDec",NOT_TOKEN,1,$1);}
+| VarDec LB INT RB          {$$ = getSyntaxUnitNode(@$.first_line,"VarDec",NOT_TOKEN,4,$1,$2,$3,$4);}
 ;
-FunDec : ID LP VarList RP  {}
-| ID LP RP     {}
+FunDec : ID LP VarList RP   {$$ = getSyntaxUnitNode(@$.first_line,"FunDec",NOT_TOKEN,4,$1,$2,$3,$4);}
+| ID LP RP                  {$$ = getSyntaxUnitNode(@$.first_line,"FunDec",NOT_TOKEN,3,$1,$2,$3);}
 ;
-VarList : ParamDec COMMA VarList  {}
-| ParamDec   {}
+VarList : ParamDec COMMA VarList  {$$ = getSyntaxUnitNode(@$.first_line,"VarList",NOT_TOKEN,3,$1,$2,$3);}
+| ParamDec                        {$$ = getSyntaxUnitNode(@$.first_line,"VarList",NOT_TOKEN,1,$1);}
 ;
-ParamDec : Specifier VarDec   {}
+ParamDec : Specifier VarDec   {$$ = getSyntaxUnitNode(@$.first_line,"ParamDec",NOT_TOKEN,2,$1,$2);}
 ;
-CompSt : LC DefList StmtList RC  {}
-StmtList : Stmt StmtList         {}
-|  {}
+CompSt : LC DefList StmtList RC  {$$ = getSyntaxUnitNode(@$.first_line,"CompSt",NOT_TOKEN,4,$1,$2,$3,$4);}
 ;
-Stmt : Exp SEMI                  {}
-| CompSt                         {}
-| RETURN Exp SEMI                {}
-| IF LP Exp RP Stmt              {}
-| IF LP Exp RP Stmt ELSE Stmt    {}
-| WHILE LP Exp RP Stmt           {}
+StmtList : Stmt StmtList         {$$ = getSyntaxUnitNode(@$.first_line,"StmtList",NOT_TOKEN,2,$1,$2);}
+|                                {$$ = NULL;}
 ;
-DefList : Def DefList            {}
-|                                {}
+Stmt : Exp SEMI                  {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,2,$1,$2);}
+| CompSt                         {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,1,$1);}
+| RETURN Exp SEMI                {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,3,$1,$2,$3);}
+| IF LP Exp RP Stmt              {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,5,$1,$2,$3,$4,$5);}
+| IF LP Exp RP Stmt ELSE Stmt    {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,7,$1,$2,$3,$4,$5,$6,$7);}
+| WHILE LP Exp RP Stmt           {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,5,$1,$2,$3,$4,$5);}
 ;
-Def : Specifier DecList SEMI     {}
+DefList : Def DefList            {$$ = getSyntaxUnitNode(@$.first_line,"DefList",NOT_TOKEN,2,$1,$2);}
+|                                {$$ = NULL;}
 ;
-DecList : Dec                    {}
-| Dec COMMA DecList              {}
+Def : Specifier DecList SEMI     {$$ = getSyntaxUnitNode(@$.first_line,"Def",NOT_TOKEN,3,$1,$2,$3);}
 ;
-Dec : VarDec                     {}
-| VarDec ASSIGNOP Exp            {}
+DecList : Dec                    {$$ = getSyntaxUnitNode(@$.first_line,"DecList",NOT_TOKEN,1,$1);}
+| Dec COMMA DecList              {$$ = getSyntaxUnitNode(@$.first_line,"DecList",NOT_TOKEN,3,$1,$2,$3);}
 ;
-Exp : Exp ASSIGNOP Exp           {}
-| Exp AND Exp                    {}
-| Exp OR Exp                     {}
-| Exp RELOP Exp                  {}
-| Exp ADD Exp                   {}
-| Exp SUB Exp                  {}
-| Exp MUL Exp                   {}
-| Exp DIV Exp                    {}
-| LP Exp RP                      {}           
-| SUB Exp                      {}
-| NOT Exp                        {}       
-| ID LP Args RP                  {}   
-| ID LP RP                       {}               
-| Exp LB Exp RB                  {}       
-| Exp DOT ID                     {}   
-| ID                             {}   
-| INT                            {}           
-| FLOAT                          {}
+Dec : VarDec                     {$$ = getSyntaxUnitNode(@$.first_line,"Dec",NOT_TOKEN,1,$1);}
+| VarDec ASSIGNOP Exp            {$$ = getSyntaxUnitNode(@$.first_line,"Dec",NOT_TOKEN,3,$1,$2,$3);}
 ;
-Args : Exp COMMA Args            {}
-| Exp                            {}
+Exp : Exp ASSIGNOP Exp           {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp AND Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp OR Exp                     {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp RELOP Exp                  {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp ADD Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp SUB Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp MUL Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| Exp DIV Exp                    {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}
+| LP Exp RP                      {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}           
+| SUB Exp                        {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,2,$1,$2);}
+| NOT Exp                        {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,2,$1,$2);}       
+| ID LP Args RP                  {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,4,$1,$2,$3,$4);}   
+| ID LP RP                       {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}               
+| Exp LB Exp RB                  {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,4,$1,$2,$3,$4);}       
+| Exp DOT ID                     {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,3,$1,$2,$3);}   
+| ID                             {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,1,$1);}   
+| INT                            {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,1,$1);}           
+| FLOAT                          {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,1,$1);}
+;
+Args : Exp COMMA Args            {$$ = getSyntaxUnitNode(@$.first_line,"Args",NOT_TOKEN,3,$1,$2,$3);}
+| Exp                            {$$ = getSyntaxUnitNode(@$.first_line,"Args",NOT_TOKEN,1,$1);}
 ;
 %%
