@@ -74,5 +74,5 @@ FLOAT {DIGIT}+"."{DIGIT}+|{DIGIT}*"."{DIGIT}+[eE][+-]?{DIGIT}+|{DIGIT}+"."{DIGIT
 {RP} {yylval.nodePtr=getLexicalUnitNode(yylineno,"RP",TOKEN_TYPE_OTHER,yytext);  return RP;}
 {LC} {yylval.nodePtr=getLexicalUnitNode(yylineno,"LC",TOKEN_TYPE_OTHER,yytext);  return LC;}
 {RC} {yylval.nodePtr=getLexicalUnitNode(yylineno,"RC",TOKEN_TYPE_OTHER,yytext);  return RC;}
-. {hasError=true; printf("Error type A at Line %d: Mysterious characters \'%s\'\n",yylineno, yytext);}
+. {hasError=true; printf("Error type A at Line %d: Mysterious character \'%s\'\n",yylineno, yytext);}
 %%
