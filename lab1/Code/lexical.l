@@ -12,7 +12,7 @@ extern bool hasError;
 
 %option yylineno
 
-NEWLINE [\n\r]+
+NEWLINE (\n|\r)+
 WS [ \t]+
 STRUCT  "struct"
 RETURN  return

@@ -1,9 +1,10 @@
 %locations
 %{
+#define YYERROR_VERBOSE 1
 #include "lex.yy.c"
 extern Node *root;
 extern bool hasError;
-int yyerror(char* msg) 
+int yyerror(const char* msg) 
 {
     hasError=true;
     printf("Error type B at Line %d: %s\n",yylineno,msg);

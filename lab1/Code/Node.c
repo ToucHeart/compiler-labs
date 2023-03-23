@@ -47,17 +47,11 @@ Node *getSyntaxUnitNode(int num, char *name, NodeType t, int argc, ...)
     Node *q = p->child;
     if (q != NULL)
     {
-        for (int i = 1; i < argc;)
+        for (int i = 1; i < argc; ++i)
         {
-            Node *temp = va_arg(arglist, Node *);
-            ++i;
-            while (temp == NULL && i < argc)
-            {
-                temp = va_arg(arglist, Node *);
-                ++i;
-            }
-            q->sibling = temp;
-            q = q->sibling;
+            q->sibling = va_arg(arglist, Node *);
+            if (q->sibling != NULL)
+                q = q->sibling;
         }
     }
     va_end(arglist);
