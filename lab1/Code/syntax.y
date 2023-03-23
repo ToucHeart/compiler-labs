@@ -6,7 +6,7 @@ extern bool hasError;
 int yyerror(char* msg) 
 {
     hasError=true;
-    fprintf(stderr, "Error type B at Line %d: %s\n",yylineno,msg);
+    printf("Error type B at Line %d: %s\n",yylineno,msg);
 }
 %}
 
