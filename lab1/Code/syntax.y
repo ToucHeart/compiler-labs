@@ -65,6 +65,7 @@ ExtDefList  :  ExtDef  ExtDefList   {$$ = getSyntaxUnitNode(@$.first_line, "ExtD
 ExtDef : Specifier ExtDecList SEMI  {$$ = getSyntaxUnitNode(@$.first_line, "ExtDef",NOT_TOKEN,3, $1,$2,$3);}
 | Specifier SEMI                    {$$ = getSyntaxUnitNode(@$.first_line, "ExtDef",NOT_TOKEN,2, $1,$2);}
 | Specifier FunDec CompSt           {$$ = getSyntaxUnitNode(@$.first_line, "ExtDef",NOT_TOKEN,3, $1,$2,$3);}
+|  error SEMI                       {}
 ;
 ExtDecList :    VarDec              {$$ = getSyntaxUnitNode(@$.first_line, "ExtDecList",NOT_TOKEN,1, $1);}
 | VarDec COMMA ExtDecList           {$$ = getSyntaxUnitNode(@$.first_line, "ExtDecList",NOT_TOKEN,3, $1,$2,$3);}
@@ -82,9 +83,11 @@ Tag : ID    {$$ = getSyntaxUnitNode(@$.first_line,"Tag",NOT_TOKEN,1,$1);}
 ;
 VarDec : ID                 {$$ = getSyntaxUnitNode(@$.first_line,"VarDec",NOT_TOKEN,1,$1);}
 | VarDec LB INT RB          {$$ = getSyntaxUnitNode(@$.first_line,"VarDec",NOT_TOKEN,4,$1,$2,$3,$4);}
+|  error RB         {}
 ;
 FunDec : ID LP VarList RP   {$$ = getSyntaxUnitNode(@$.first_line,"FunDec",NOT_TOKEN,4,$1,$2,$3,$4);}
 | ID LP RP                  {$$ = getSyntaxUnitNode(@$.first_line,"FunDec",NOT_TOKEN,3,$1,$2,$3);}
+|  error RP      {}
 ;
 VarList : ParamDec COMMA VarList  {$$ = getSyntaxUnitNode(@$.first_line,"VarList",NOT_TOKEN,3,$1,$2,$3);}
 | ParamDec                        {$$ = getSyntaxUnitNode(@$.first_line,"VarList",NOT_TOKEN,1,$1);}
@@ -92,6 +95,7 @@ VarList : ParamDec COMMA VarList  {$$ = getSyntaxUnitNode(@$.first_line,"VarList
 ParamDec : Specifier VarDec   {$$ = getSyntaxUnitNode(@$.first_line,"ParamDec",NOT_TOKEN,2,$1,$2);}
 ;
 CompSt : LC DefList StmtList RC  {$$ = getSyntaxUnitNode(@$.first_line,"CompSt",NOT_TOKEN,4,$1,$2,$3,$4);}
+| error RC                       {}
 ;
 StmtList : Stmt StmtList         {$$ = getSyntaxUnitNode(@$.first_line,"StmtList",NOT_TOKEN,2,$1,$2);}
 |                                {$$ = NULL;}
@@ -102,6 +106,7 @@ Stmt : Exp SEMI                  {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NO
 | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE  {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,5,$1,$2,$3,$4,$5);}
 | IF LP Exp RP Stmt ELSE Stmt    {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,7,$1,$2,$3,$4,$5,$6,$7);}
 | WHILE LP Exp RP Stmt           {$$ = getSyntaxUnitNode(@$.first_line,"Stmt",NOT_TOKEN,5,$1,$2,$3,$4,$5);}
+| error SEMI                     {}
 ;
 DefList : Def DefList            {$$ = getSyntaxUnitNode(@$.first_line,"DefList",NOT_TOKEN,2,$1,$2);}
 |                                {$$ = NULL;}
