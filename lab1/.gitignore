@@ -5,6 +5,8 @@
 !*.l
 !*.y
 !Makefile
+!*.h
+syntax.tab.h
 lex.yy.c
 syntax.tab.c
 !.gitignore
