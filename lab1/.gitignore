@@ -5,7 +5,6 @@
 !*.l
 !*.y
 !Makefile
-!report.pdf
 lex.yy.c
 syntax.tab.c
 !.gitignore
