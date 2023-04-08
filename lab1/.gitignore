@@ -10,3 +10,5 @@ syntax.tab.h
 lex.yy.c
 syntax.tab.c
 !.gitignore
+a.c
+a.out
