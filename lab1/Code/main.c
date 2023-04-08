@@ -1,4 +1,4 @@
-#include "Node.h"
+#include "treeNode.h"
 
 bool hasError = false;
 extern int yyparse();
