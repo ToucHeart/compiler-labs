@@ -14,6 +14,11 @@ char* mystrdup(const char* str)
     return p;
 }
 
+bool strEqual(const char* str1, const char* str2)
+{
+    return strcmp(str1, str2) == 0;
+}
+
 static void printSemanticError(int errType, int lineNum, char* message, int num, ...)
 {
     printf("Error type %d at Line %d: %s", errType, lineNum, message);
@@ -43,11 +48,6 @@ static unsigned int hash(char* name)
 // global symbol table
 Symbol* SymbolTable[HASH_TABLE_SIZE + 1];
 
-Symbol* serarch(char* name)
-{
-    unsigned key = hash(name);
-}
-
 bool contains(char* name, Kind k)
 {
     unsigned key = hash(name);
@@ -62,7 +62,7 @@ bool contains(char* name, Kind k)
         {
             if (k == VAR && p->type->kind != FUNCTION || k == p->type->kind)
             {
-                if (strcmp(p->name, name) == 0)
+                if (strEqual(p->name, name))
                 {
                     return true;
                 }
@@ -87,10 +87,7 @@ void insert(Symbol* s)
     }
 }
 
-// 每个Def就是一条变量定义，它包括一个类型描述符Specifier以及一个DecList
-void DefList(Node* deflist)
-{
-}
+
 
 
 
@@ -104,20 +101,20 @@ Type* Specifier(Node* n)
 {
     Type* ret = (Type*)malloc(sizeof(Type));
     Node* node = n->child;
-    if (!strcmp(node->unitName, "TYPE"))
+    if (strEqual(node->unitName, "TYPE"))
     {
-        if (strcmp(node->val.str, "int") == 0)
+        if (strEqual(node->val.str, "int"))
         {
             ret->kind = BASIC;
             ret->t.basicType = INT;
         }
-        else if (strcmp(node->val.str, "float") == 0)
+        else if (strEqual(node->val.str, "float"))
         {
             ret->kind = BASIC;
             ret->t.basicType = FLOAT;
         }
     }
-    else if (!strcmp(node->unitName, "StructSpecifier"))
+    else if (strEqual(node->unitName, "StructSpecifier"))
     {
         ret->kind = STRUCTURE;
         ret->t.structure = getStruct(node->child);
@@ -129,9 +126,9 @@ Type* Specifier(Node* n)
     return ret;
 }
 
-char* Array(Node* node, Type* t) // VarDec LB INT RB
+Symbol* Array(Node* node, Type* t) // VarDec LB INT RB
 {
-    if (strcmp(node->unitName, "ID") == 0)
+    if (strEqual(node->unitName, "ID"))
     {
         char* name = node->val.str;
         if (contains(name, VAR))
@@ -145,26 +142,28 @@ char* Array(Node* node, Type* t) // VarDec LB INT RB
             s->type = t;
             s->next = NULL;
             insert(s);
+            return s;
         }
     }
-    else if (strcmp(node->unitName, "VarDec") == 0)
+    else if (strEqual(node->unitName, "VarDec"))
     {
         Type* temp = (Type*)malloc(sizeof(Type));
         temp->kind = ARRAY;
         temp->t.array.elem = t;
         temp->t.array.size = node->sibling->sibling->val.int_val;
-        Array(node->child, temp);
+        return Array(node->child, temp);
     }
     else
     {
         assert(false);
     }
+    return NULL;
 }
 
-void Vardec(Node* n, Type* t) // VarDec → ID | VarDec LB INT RB
+Symbol* VarDec(Node* n, Type* t) // VarDec → ID | VarDec LB INT RB
 {
     Node* node = n->child;
-    if (strcmp(node->unitName, "ID") == 0) // simple variable
+    if (strEqual(node->unitName, "ID")) // simple variable
     {
         char* name = node->val.str;
         if (contains(name, VAR))
@@ -178,36 +177,115 @@ void Vardec(Node* n, Type* t) // VarDec → ID | VarDec LB INT RB
             s->next = NULL;
             s->type = t;
             insert(s);
+            return s;
         }
     }
-    else if (strcmp(node->unitName, "VarDec") == 0) // arrary
+    else if (strEqual(node->unitName, "VarDec")) // arrary
     {
-        Array(node, t);
+        return Array(node, t);
     }
     else
     {
         assert(false);
     }
+    return NULL;
 }
 
 // int global1, global2;
 void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,== vardec
 {
-    Vardec(subtree->child, t);
+    VarDec(subtree->child, t);
     if (subtree->child->sibling != NULL)
     {
         Node* nextid = subtree->child->sibling->sibling; // nextid== ExtDecList
         ExtDecList(nextid, t);
     }
 }
+/*
+StmtList → Stmt StmtList | 空
+Stmt → Exp SEMI
+| CompSt
+| RETURN Exp SEMI
+| IF LP Exp RP Stmt
+| IF LP Exp RP Stmt ELSE Stmt
+| WHILE LP Exp RP Stmt
+*/
+void StmtList(Node* node)
+{
 
-void CompSt(Node* node) {}
+}
+
+void Exp(Node* node)
+{
+
+}
+// Dec → VarDec | VarDec ASSIGNOP Exp
+void Dec(Node* node, Type* type)
+{
+    Node* first = node->child;
+    Symbol* s = VarDec(first, type);//TODO:暂存符号,如果不为NULL的话后面会用到
+    if (first->sibling != NULL)
+    {
+        Exp(first->sibling->sibling);//TODO: check Assignment legal
+    }
+}
+// DecList → Dec | Dec COMMA DecList
+void DecList(Node* node, Type* type)
+{
+    assert(strEqual(node->unitName, "DecList"));
+    Node* first = node->child;
+    Dec(first, type);
+    if (first->sibling != NULL)
+    {
+        DecList(first->sibling->sibling, type);
+    }
+}
+// 每个Def就是一条变量定义，它包括一个类型描述符Specifier以及一个DecList
+// Def → Specifier DecList SEMI
+void Def(Node* node)
+{
+    assert(strEqual(node->unitName, "Def"));
+    Node* first = node->child, * second = first->sibling;
+    Type* temp = Specifier(first);
+    DecList(second, temp);
+}
+// DefList → Def DefList | 空
+void DefList(Node* node)
+{
+    assert(strEqual(node->unitName, "DefList"));
+    Node* def = node->child;
+    Def(def);
+    if (def->sibling != NULL)
+    {
+        DefList(def->sibling);
+    }
+}
+
+//CompSt → LC DefList StmtList RC
+void CompSt(Node* node)
+{
+    Node* secondone = node->child->sibling;
+    Node* thirdone = NULL;
+    if (strEqual(secondone->unitName, "DefList"))
+    {
+        DefList(secondone);
+        thirdone = secondone->sibling;
+    }
+    else if (strEqual(secondone->unitName, "StmtList"))
+    {
+        thirdone = secondone;
+    }
+    if (thirdone != NULL && strEqual(thirdone->unitName, "StmtList"))
+    {
+        StmtList(thirdone);
+    }
+}
 
 //ParamDec → Specifier VarDec
 void ParamDec(Node* node, Symbol* s)
 {
     Type* temp = Specifier(node->child);
-    Vardec(node->child->sibling, temp);
+    VarDec(node->child->sibling, temp);
     Parameter* p = s->type->t.function.params;
     if (p->t == NULL)
     {
@@ -254,12 +332,12 @@ void FunDec(Node* node, Type* retType)
         s->type->kind = FUNCTION;
         s->type->t.function.returnType = retType;
         Node* thirdone = idnode->sibling->sibling;
-        if (strcmp(thirdone->unitName, "RP") == 0)
+        if (strEqual(thirdone->unitName, "RP"))
         {
             s->type->t.function.argc = 0;
             s->type->t.function.params = NULL;
         }
-        else if (strcmp(thirdone->unitName, "VarList") == 0)
+        else if (strEqual(thirdone->unitName, "VarList"))
         {
             s->type->t.function.params = (Parameter*)malloc(sizeof(Parameter));
             Parameter* p = s->type->t.function.params;
@@ -280,15 +358,15 @@ void ExtDef(Node* extdef)
 {
     Node* firstchild = extdef->child, * secondchild = firstchild->sibling;
     Type* t = Specifier(firstchild);
-    if (strcmp(secondchild->unitName, "FunDec") == 0) // function definition
+    if (strEqual(secondchild->unitName, "FunDec")) // function definition
     {
         FunDec(secondchild, t);
     }
-    else if (strcmp(secondchild->unitName, "ExtDecList") == 0) // variable definition,including array
+    else if (strEqual(secondchild->unitName, "ExtDecList")) // variable definition,including array
     {
         ExtDecList(secondchild, t);
     }
-    else if (strcmp(secondchild->unitName, "SEMI") == 0) // struct definition
+    else if (strEqual(secondchild->unitName, "SEMI")) // struct definition
     {
     }
     else
@@ -299,15 +377,13 @@ void ExtDef(Node* extdef)
 
 void ExtDefList(Node* subtree) // subtree unitName == "ExtDefList"
 {
-    if (subtree == NULL)
-        return;
     for (Node* q = subtree->child; q != NULL; q = q->sibling)
     {
-        if (strcmp(q->unitName, "ExtDef") == 0)
+        if (strEqual(q->unitName, "ExtDef"))
         {
             ExtDef(q);
         }
-        else if (strcmp(q->unitName, "ExtDefList") == 0)
+        else if (strEqual(q->unitName, "ExtDefList"))
         {
             ExtDefList(q);
         }
@@ -316,9 +392,6 @@ void ExtDefList(Node* subtree) // subtree unitName == "ExtDefList"
 extern Node* root;
 void analyseTree()
 {
-#if 1
-    printf("analyseTree\n");
-#endif
     if (root != NULL)
         ExtDefList(root->child);
 }
