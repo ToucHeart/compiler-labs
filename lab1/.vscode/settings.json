@@ -135,7 +135,7 @@
   "editor.tokenColorCustomizations": {
     "comments": "#00ffea"
   },
-  "workbench.colorTheme": "SynthWave '84",
+  "workbench.colorTheme": "One Dark Modern",
   "terminal.integrated.defaultProfile.windows": "PowerShell",
   "terminal.integrated.cursorBlinking": true,
   "vim.useCtrlKeys": true,
@@ -178,6 +178,9 @@
     "functional": "cpp",
     "string_view": "cpp",
     "streambuf": "cpp",
-    "syntaxtree.h": "c"
+    "syntaxtree.h": "c",
+    "iosfwd": "c",
+    "numeric": "c",
+    "tuple": "c"
   }
 }

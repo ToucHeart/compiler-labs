@@ -5,15 +5,30 @@
 #include <stdbool.h>
 #include <string.h>
 #include "syntaxTree.h"
+#include<stdarg.h>
 
-char *mystrdup(const char *str)
+char* mystrdup(const char* str)
 {
-    char *p = (char *)malloc(strlen(str) + 1);
+    char* p = (char*)malloc(strlen(str) + 1);
     strcpy(p, str);
     return p;
 }
 
-static unsigned int hash(char *name)
+static void printSemanticError(int errType, int lineNum, char* message, int num, ...)
+{
+    printf("Error type %d at Line %d: %s", errType, lineNum, message);
+    va_list valist;
+    va_start(valist, num);
+    for (int i = 0; i < num; i++)
+    {
+        char* str = va_arg(valist, char*);
+        printf("%s", str);
+    }
+    printf("\n");
+    va_end(valist);
+}
+
+static unsigned int hash(char* name)
 {
     unsigned int val = 0, i;
     for (; *name; ++name)
@@ -26,14 +41,14 @@ static unsigned int hash(char *name)
 }
 
 // global symbol table
-Symbol *SymbolTable[HASH_TABLE_SIZE + 1];
+Symbol* SymbolTable[HASH_TABLE_SIZE + 1];
 
-Symbol *serarch(char *name)
+Symbol* serarch(char* name)
 {
     unsigned key = hash(name);
 }
 
-bool contains(char *name)
+bool contains(char* name, Kind k)
 {
     unsigned key = hash(name);
     if (SymbolTable[key] == NULL)
@@ -42,12 +57,15 @@ bool contains(char *name)
     }
     else
     {
-        Symbol *p = SymbolTable[key];
+        Symbol* p = SymbolTable[key];
         while (p != NULL)
         {
-            if (strcmp(p->name, name) == 0)
+            if (k == VAR && p->type->kind != FUNCTION || k == p->type->kind)
             {
-                return true;
+                if (strcmp(p->name, name) == 0)
+                {
+                    return true;
+                }
             }
             p = p->next;
         }
@@ -55,7 +73,7 @@ bool contains(char *name)
     return false;
 }
 
-void insert(Symbol *s)
+void insert(Symbol* s)
 {
     unsigned key = hash(s->name);
     if (SymbolTable[key] == NULL)
@@ -70,34 +88,30 @@ void insert(Symbol *s)
 }
 
 // 每个Def就是一条变量定义，它包括一个类型描述符Specifier以及一个DecList
-void DefList(Node *deflist)
+void DefList(Node* deflist)
 {
 }
 
-void FunDec(Node *f, Symbol *p)
-{
-}
 
-void specifier(Node *node, Symbol *s)
-{
-}
 
-FieldList *getStruct(Node *node)
+
+FieldList* getStruct(Node* node)
 {
 }
 
 // specifier
-Type *getType(Node *node)
+Type* Specifier(Node* n)
 {
-    Type *ret = (Type *)malloc(sizeof(Type));
+    Type* ret = (Type*)malloc(sizeof(Type));
+    Node* node = n->child;
     if (!strcmp(node->unitName, "TYPE"))
     {
-        if (node->type == TOKEN_TYPE_INT)
+        if (strcmp(node->val.str, "int") == 0)
         {
             ret->kind = BASIC;
             ret->t.basicType = INT;
         }
-        else if (node->type == TOKEN_TYPE_FLOAT)
+        else if (strcmp(node->val.str, "float") == 0)
         {
             ret->kind = BASIC;
             ret->t.basicType = FLOAT;
@@ -115,26 +129,27 @@ Type *getType(Node *node)
     return ret;
 }
 
-char *Array(Node *node, Type *t) // VarDec LB INT RB
+char* Array(Node* node, Type* t) // VarDec LB INT RB
 {
     if (strcmp(node->unitName, "ID") == 0)
     {
-        char *name = node->val.str;
-        if (contains(name))
+        char* name = node->val.str;
+        if (contains(name, VAR))
         {
-            printf("Error type 3 at Line %d: Redefined variable \"%s\".\n", node->lineNum, node->val.str);
+            printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
         }
         else
         {
-            Symbol *s = (Symbol *)malloc(sizeof(Symbol));
+            Symbol* s = (Symbol*)malloc(sizeof(Symbol));
             s->name = mystrdup(name);
             s->type = t;
             s->next = NULL;
+            insert(s);
         }
     }
     else if (strcmp(node->unitName, "VarDec") == 0)
     {
-        Type *temp = (Type *)malloc(sizeof(Type));
+        Type* temp = (Type*)malloc(sizeof(Type));
         temp->kind = ARRAY;
         temp->t.array.elem = t;
         temp->t.array.size = node->sibling->sibling->val.int_val;
@@ -146,20 +161,23 @@ char *Array(Node *node, Type *t) // VarDec LB INT RB
     }
 }
 
-void Vardec(Node *node, Type *t) // VarDec → ID | VarDec LB INT RB
+void Vardec(Node* n, Type* t) // VarDec → ID | VarDec LB INT RB
 {
+    Node* node = n->child;
     if (strcmp(node->unitName, "ID") == 0) // simple variable
     {
-        if (contains(node->val.str))
+        char* name = node->val.str;
+        if (contains(name, VAR))
         {
-            printf("Error type 3 at Line %d: Redefined variable \"%s\".\n", node->lineNum, node->val.str);
+            printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
         }
         else
         {
-            Symbol *s = (Symbol *)malloc(sizeof(Symbol));
+            Symbol* s = (Symbol*)malloc(sizeof(Symbol));
             s->name = mystrdup(node->val.str);
             s->next = NULL;
             s->type = t;
+            insert(s);
         }
     }
     else if (strcmp(node->unitName, "VarDec") == 0) // arrary
@@ -173,13 +191,84 @@ void Vardec(Node *node, Type *t) // VarDec → ID | VarDec LB INT RB
 }
 
 // int global1, global2;
-void ExtDecList(Node *subtree, Type *t) // subtree is firstchild of ExtDecList,== vardec
+void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,== vardec
 {
     Vardec(subtree->child, t);
-    if (subtree->sibling != NULL)
+    if (subtree->child->sibling != NULL)
     {
-        Node *nextid = subtree->sibling->sibling; // nextid== ExtDecList
-        ExtDecList(nextid->child, t);
+        Node* nextid = subtree->child->sibling->sibling; // nextid== ExtDecList
+        ExtDecList(nextid, t);
+    }
+}
+
+void CompSt(Node* node) {}
+
+//ParamDec → Specifier VarDec
+void ParamDec(Node* node, Symbol* s)
+{
+    Type* temp = Specifier(node->child);
+    Vardec(node->child->sibling, temp);
+    Parameter* p = s->type->t.function.params;
+    if (p->t == NULL)
+    {
+        p->t = temp;
+    }
+    else
+    {
+        while (p->next != NULL)
+        {
+            p = p->next;
+        }
+        Parameter* m = (Parameter*)malloc(sizeof(Parameter));
+        m->t = temp;
+        m->next = NULL;
+        p->next = m;
+    }
+}
+//VarList → ParamDec COMMA VarList
+//        | ParamDec
+void VarList(Node* node, Symbol* s)
+{
+    ParamDec(node->child, s);
+    if (node->child->sibling != NULL)
+    {
+        VarList(node->child->sibling->sibling, s);
+    }
+}
+//FunDec → ID LP VarList RP 
+//       | ID LP RP
+void FunDec(Node* node, Type* retType)
+{
+    Node* idnode = node->child;
+    char* name = idnode->val.str;
+    if (contains(name, FUNCTION))
+    {
+        printSemanticError(4, node->lineNum, "Redefined function \"", 2, name, "\".");
+    }
+    else
+    {
+        Symbol* s = (Symbol*)malloc(sizeof(Symbol));
+        s->name = mystrdup(name);
+        s->next = NULL;
+        s->type = (Type*)malloc(sizeof(Type));
+        s->type->kind = FUNCTION;
+        s->type->t.function.returnType = retType;
+        Node* thirdone = idnode->sibling->sibling;
+        if (strcmp(thirdone->unitName, "RP") == 0)
+        {
+            s->type->t.function.argc = 0;
+            s->type->t.function.params = NULL;
+        }
+        else if (strcmp(thirdone->unitName, "VarList") == 0)
+        {
+            s->type->t.function.params = (Parameter*)malloc(sizeof(Parameter));
+            Parameter* p = s->type->t.function.params;
+            p->next = NULL;
+            p->t = NULL;
+            VarList(thirdone, s);
+        }
+        CompSt(node->sibling);
+        insert(s);
     }
 }
 
@@ -187,16 +276,17 @@ void ExtDecList(Node *subtree, Type *t) // subtree is firstchild of ExtDecList,=
 // ExtDef → Specifier ExtDecList SEMI
 // ExtDef → Specifier SEMI
 // ExtDef → Specifier FunDec CompSt
-void ExtDef(Node *extdef)
+void ExtDef(Node* extdef)
 {
-    Node *firstchild = extdef->child, *secondchild = firstchild->sibling, *thirdchild = secondchild->sibling;
-    Type *t = getType(firstchild->child);
+    Node* firstchild = extdef->child, * secondchild = firstchild->sibling;
+    Type* t = Specifier(firstchild);
     if (strcmp(secondchild->unitName, "FunDec") == 0) // function definition
     {
+        FunDec(secondchild, t);
     }
     else if (strcmp(secondchild->unitName, "ExtDecList") == 0) // variable definition,including array
     {
-        ExtDecList(secondchild->child, t);
+        ExtDecList(secondchild, t);
     }
     else if (strcmp(secondchild->unitName, "SEMI") == 0) // struct definition
     {
@@ -207,11 +297,11 @@ void ExtDef(Node *extdef)
     }
 }
 
-void ExtDefList(Node *subtree) // subtree unitName == "ExtDefList"
+void ExtDefList(Node* subtree) // subtree unitName == "ExtDefList"
 {
     if (subtree == NULL)
         return;
-    for (Node *q = subtree->child; q != NULL; q = q->sibling)
+    for (Node* q = subtree->child; q != NULL; q = q->sibling)
     {
         if (strcmp(q->unitName, "ExtDef") == 0)
         {
@@ -223,12 +313,12 @@ void ExtDefList(Node *subtree) // subtree unitName == "ExtDefList"
         }
     }
 }
-extern Node *root;
+extern Node* root;
 void analyseTree()
 {
 #if 1
     printf("analyseTree\n");
 #endif
     if (root != NULL)
-        ExtDefList(root);
+        ExtDefList(root->child);
 }
