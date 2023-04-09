@@ -12,3 +12,4 @@ syntax.tab.c
 !.gitignore
 a.c
 a.out
+!.vscode
