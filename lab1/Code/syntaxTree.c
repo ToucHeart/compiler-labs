@@ -1,4 +1,4 @@
-#include "treeNode.h"
+#include "syntaxTree.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>

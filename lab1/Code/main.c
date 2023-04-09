@@ -1,9 +1,10 @@
-#include "treeNode.h"
+#include "syntaxTree.h"
 
 bool hasError = false;
 extern int yyparse();
 extern void yyrestart(FILE *);
 extern int yydebug;
+extern void analyseTree();
 
 int main(int argc, char **argv)
 {
@@ -21,7 +22,10 @@ int main(int argc, char **argv)
     yyrestart(f);
     yyparse();
     if (!hasError)
-        printTree();
+    {
+        // printTree();
+        analyseTree();
+    }
     freeMemory();
     return 0;
 }

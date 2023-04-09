@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <string.h>
-#include "treeNode.h"
+#include "syntaxTree.h"
 
 char *mystrdup(const char *str)
 {
@@ -26,14 +26,36 @@ static unsigned int hash(char *name)
 }
 
 // global symbol table
-Symbol *SymbolTable[HASH_TABLE_SIZE];
+Symbol *SymbolTable[HASH_TABLE_SIZE + 1];
 
 Symbol *serarch(char *name)
 {
     unsigned key = hash(name);
 }
 
-bool insert(Symbol *s)
+bool contains(const char *name)
+{
+    unsigned key = hash(name);
+    if (SymbolTable[key] == NULL)
+    {
+        return false;
+    }
+    else
+    {
+        Symbol *p = SymbolTable[key];
+        while (p != NULL)
+        {
+            if (strcmp(p->name, name) == 0)
+            {
+                return true;
+            }
+            p = p->next;
+        }
+    }
+    return false;
+}
+
+void insert(Symbol *s)
 {
     unsigned key = hash(s->name);
     if (SymbolTable[key] == NULL)
@@ -42,6 +64,8 @@ bool insert(Symbol *s)
     }
     else
     {
+        s->next = SymbolTable[key];
+        SymbolTable[key] = s;
     }
 }
 
@@ -91,18 +115,56 @@ Type *getType(Node *node)
     return ret;
 }
 
-void Vardec(Node *node, Type *t) // node ==  ID | VarDec LB INT RB
+char *Array(Node *node, Type *t) // VarDec LB INT RB
+{
+    if (strcmp(node->unitName, "ID") == 0)
+    {
+        char *name = node->val.str;
+        if (contains(name))
+        {
+            printf("Error type 3 at Line %d: Redefined variable \"%s\".\n", node->lineNum, node->val.str);
+        }
+        else
+        {
+            Symbol *s = (Symbol *)malloc(sizeof(Symbol));
+            s->name = mystrdup(name);
+            s->type = t;
+            s->next = NULL;
+        }
+    }
+    else if (strcmp(node->unitName, "VarDec") == 0)
+    {
+        Type *temp = (Type *)malloc(sizeof(Type));
+        temp->kind = ARRAY;
+        temp->t.array.elem = t;
+        temp->t.array.size = node->sibling->sibling->val.int_val;
+        Array(node->child, temp);
+    }
+    else
+    {
+        assert(false);
+    }
+}
+
+void Vardec(Node *node, Type *t) // VarDec → ID | VarDec LB INT RB
 {
     if (strcmp(node->unitName, "ID") == 0) // simple variable
     {
-        Symbol *s = (Symbol *)malloc(sizeof(Symbol));
-        s->name = mystrdup(node->val.str);
-        s->next = NULL;
-        s->type = t;
-        insert(s);
+        if (contains(node->val.str))
+        {
+            printf("Error type 3 at Line %d: Redefined variable \"%s\".\n", node->lineNum, node->val.str);
+        }
+        else
+        {
+            Symbol *s = (Symbol *)malloc(sizeof(Symbol));
+            s->name = mystrdup(node->val.str);
+            s->next = NULL;
+            s->type = t;
+        }
     }
     else if (strcmp(node->unitName, "VarDec") == 0) // arrary
     {
+        Array(node, t);
     }
     else
     {
@@ -111,7 +173,7 @@ void Vardec(Node *node, Type *t) // node ==  ID | VarDec LB INT RB
 }
 
 // int global1, global2;
-void ExtDecList(Node *subtree, Type *t)
+void ExtDecList(Node *subtree, Type *t) // subtree is firstchild of ExtDecList,== vardec
 {
     Vardec(subtree->child, t);
     if (subtree->sibling != NULL)
@@ -125,18 +187,18 @@ void ExtDecList(Node *subtree, Type *t)
 // ExtDef → Specifier ExtDecList SEMI
 // ExtDef → Specifier SEMI
 // ExtDef → Specifier FunDec CompSt
-void Extdef(Node *extdef)
+void ExtDef(Node *extdef)
 {
     Node *firstchild = extdef->child, *secondchild = firstchild->sibling, *thirdchild = secondchild->sibling;
     Type *t = getType(firstchild->child);
-    if (strcmp(secondchild->unitName, "FunDec") == 0)
+    if (strcmp(secondchild->unitName, "FunDec") == 0) // function definition
     {
     }
-    else if (strcmp(secondchild->unitName, "ExtDecList") == 0)
+    else if (strcmp(secondchild->unitName, "ExtDecList") == 0) // variable definition,including array
     {
         ExtDecList(secondchild->child, t);
     }
-    else if (strcmp(secondchild->unitName, "SEMI") == 0)
+    else if (strcmp(secondchild->unitName, "SEMI") == 0) // struct definition
     {
     }
     else
@@ -145,7 +207,7 @@ void Extdef(Node *extdef)
     }
 }
 
-void ExdefList(Node *subtree) // subtree unitName == "ExtDefList"
+void ExtDefList(Node *subtree) // subtree unitName == "ExtDefList"
 {
     if (subtree == NULL)
         return;
@@ -153,11 +215,17 @@ void ExdefList(Node *subtree) // subtree unitName == "ExtDefList"
     {
         if (strcmp(q->unitName, "ExtDef") == 0)
         {
-            Extdef(q);
+            ExtDef(q);
         }
         else if (strcmp(q->unitName, "ExtDefList") == 0)
         {
-            ExdefList(q);
+            ExtDefList(q);
         }
     }
+}
+extern Node *root;
+void analyseTree()
+{
+    if (root != NULL)
+        ExtDefList(root);
 }
