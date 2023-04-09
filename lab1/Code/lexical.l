@@ -1,5 +1,5 @@
 %{
-#include "treeNode.h"
+#include "syntaxTree.h"
 #include "syntax.tab.h"
 int yycolumn = 1;
 extern bool hasError;

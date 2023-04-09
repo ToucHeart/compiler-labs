@@ -33,7 +33,7 @@ Symbol *serarch(char *name)
     unsigned key = hash(name);
 }
 
-bool contains(const char *name)
+bool contains(char *name)
 {
     unsigned key = hash(name);
     if (SymbolTable[key] == NULL)
@@ -226,6 +226,9 @@ void ExtDefList(Node *subtree) // subtree unitName == "ExtDefList"
 extern Node *root;
 void analyseTree()
 {
+#if 1
+    printf("analyseTree\n");
+#endif
     if (root != NULL)
         ExtDefList(root);
 }
