@@ -12,4 +12,5 @@ syntax.tab.c
 !.gitignore
 a.c
 a.out
-!.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
