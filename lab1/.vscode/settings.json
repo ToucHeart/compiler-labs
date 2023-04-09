@@ -1,0 +1,183 @@
+{
+  "C_Cpp.updateChannel": "Insiders",
+  "workbench.editor.enablePreview": false,
+  "code-runner.runInTerminal": true,
+  "code-runner.saveFileBeforeRun": true,
+  "explorer.confirmDelete": false,
+  "files.autoGuessEncoding": true,
+  "code-runner.saveAllFilesBeforeRun": true,
+  "editor.codeLensFontSize": 3,
+  "editor.fontWeight": "normal",
+  "kite.showWelcomeNotificationOnStartup": false,
+  "c-cpp-compile-run.run-in-external-terminal": true,
+  "leetcode.nodePath": "D:\\node.js\\node.exe",
+  "leetcode.endpoint": "leetcode-cn",
+  "leetcode.defaultLanguage": "cpp",
+  "leetcode.workspaceFolder": "e:\\.leetcode",
+  "leetcode.hint.configWebviewMarkdown": false,
+  "leetcode.hint.commentDescription": false,
+  "tabnine.experimentalAutoImports": true,
+  "editor.formatOnPaste": true,
+  "editor.fontSize": 14,
+  "cmake.configureOnOpen": true,
+  "C_Cpp.default.cppStandard": "c++20",
+  "C_Cpp.default.cStandard": "c11",
+  "editor.defaultFormatter": "ms-vscode.cpptools",
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  },
+  "sync.gist": "ebec01061d50faa29073133283f2f088",
+  "workbench.colorCustomizations": {
+    "editor.selectionHighlightBackground": "#5eff0071",
+    "editor.selectionBackground": "#00ff4094"
+  },
+  "editor.selectionHighlight": false,
+  "better-comments.highlightPlainText": true,
+  "better-comments.tags": [
+    {
+      "tag": "!",
+      "color": "#FF2D00",
+      "strikethrough": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "tag": "?",
+      "color": "#3498DB",
+      "strikethrough": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "tag": "//",
+      "color": "#349e69",
+      "strikethrough": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "tag": "todo",
+      "color": "#FF8C00",
+      "strikethrough": false,
+      "backgroundColor": "transparent"
+    },
+    {
+      "tag": "*",
+      "color": "#98C379",
+      "strikethrough": false,
+      "backgroundColor": "transparent"
+    }
+  ],
+  "editor.minimap.enabled": false,
+  "todohighlight.keywords": [],
+  "todohighlight.include": [
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.html",
+    "**/*.php",
+    "**/*.css",
+    "**/*.scss"
+  ],
+  "todohighlight.defaultStyle": {
+    "overviewRulerColor": "highlight"
+  },
+  "todohighlight.exclude": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.vscode/**",
+    "**/.github/**",
+    "**/_output/**",
+    "**/*.min.*",
+    "**/*.map",
+    "**/.next/**"
+  ],
+  "workbench.editorAssociations": {
+    "*.exe": "default",
+    "*.ipynb": "jupyter-notebook",
+    "*.chm": "default"
+  },
+  "python.showStartPage": false,
+  "notebook.cellToolbarLocation": {
+    "default": "right",
+    "jupyter-notebook": "left"
+  },
+  "editor.autoClosingBrackets": "beforeWhitespace",
+  "editor.formatOnSave": true,
+  "html.format.contentUnformatted": "",
+  "C_Cpp.default.systemIncludePath": [],
+  "files.autoSave": "afterDelay",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.tslint": true
+  },
+  "clang-format.language.typescript.fallbackStyle": "WebKit",
+  "clang-format.fallbackStyle": "WebKit",
+  "clang-format.language.c.fallbackStyle": "WebKit",
+  "clang-format.language.cpp.fallbackStyle": "WebKit",
+  "clang-format.style": "WebKit",
+  "clang-format.language.javascript.fallbackStyle": "WebKit",
+  "editor.formatOnType": true,
+  "clang-format.assumeFilename": "true",
+  "[c]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  },
+  "C_Cpp.formatting": "vcFormat",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.type": "newLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.namespace": "newLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.lambda": "newLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.function": "newLine",
+  "C_Cpp.vcFormat.newLine.beforeOpenBrace.block": "newLine",
+  "C_Cpp.vcFormat.indent.caseContents": false,
+  "C_Cpp.vcFormat.indent.lambdaBracesWhenParameter": false,
+  "C_Cpp.vcFormat.indent.namespaceContents": false,
+  "C_Cpp.default.compilerPath": "",
+  "C_Cpp.default.compilerArgs": [],
+  "editor.tokenColorCustomizations": {
+    "comments": "#00ffea"
+  },
+  "workbench.colorTheme": "SynthWave '84",
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.cursorBlinking": true,
+  "vim.useCtrlKeys": true,
+  "vim.useSystemClipboard": true,
+  "vim.handleKeys": {
+    "<C-a>": false,
+    "<C-b>": false,
+    "<C-c>": false,
+    "<C-d>": false,
+    "<C-e>": false,
+    "<C-f>": false,
+    // "<C-g>": false,
+    "<C-h>": false,
+    //"<C-i>": false,
+    "<C-j>": false,
+    "<C-k>": false,
+    "<C-l>": false,
+    "<C-m>": false,
+    "<C-n>": false,
+    //"<C-o>": false,
+    "<C-p>": false,
+    "<C-q>": false,
+    // "<C-r>": false,
+    "<C-s>": false,
+    "<C-t>": false,
+    "<C-u>": false,
+    "<C-v>": false,
+    "<C-w>": false,
+    "<C-x>": false,
+    "<C-y>": false,
+    "<C-z>": false
+  },
+  "editor.fontFamily": "'Fira Code', Consolas, 'Microsoft Yahei'",
+  "editor.fontLigatures": true,
+  "[shellscript]": {},
+  "files.associations": {
+    "*.tcc": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "functional": "cpp",
+    "string_view": "cpp",
+    "streambuf": "cpp",
+    "syntaxtree.h": "c"
+  }
+}
