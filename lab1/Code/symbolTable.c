@@ -73,6 +73,8 @@ bool contains(char* name, Kind k)
     return false;
 }
 
+
+
 void insert(Symbol* s)
 {
     unsigned key = hash(s->name);
@@ -87,13 +89,73 @@ void insert(Symbol* s)
     }
 }
 
-
-
-
-
-
-FieldList* getStruct(Node* node)
+Symbol* searchSymbol(char* name, Kind k)
 {
+    unsigned key = hash(name);
+    if (SymbolTable[key] == NULL)
+    {
+        return NULL;
+    }
+    else
+    {
+        Symbol* p = SymbolTable[key];
+        while (p != NULL)
+        {
+            if (strEqual(p->name, name) && k == p->type->kind)
+            {
+                return p;
+            }
+            p = p->next;
+        }
+    }
+    return NULL;
+}
+
+
+
+/*
+StructSpecifier → STRUCT OptTag LC DefList RC 定义
+                | STRUCT Tag                  使用
+OptTag → ID | 空
+Tag → ID
+*/
+FieldList* StructSpecifier(Node* node)
+{
+    Node* first = node->child, * second = first->sibling;
+    if (strEqual(second->unitName, "Tag"))//use struct defined
+    {
+        Symbol* structdef = searchSymbol(second->child->val.str, STRUCTURE);
+        if (structdef == NULL)
+        {
+            printSemanticError(17, second->lineNum, "Undefined structure \"", 2, second->child->val.str, "\".");
+        }
+        else
+        {
+            return structdef->type->t.structure;
+        }
+    }
+    else if (strEqual(second->unitName, "OptTag"))//has opttag specified
+    {
+        Node* structid = second->child;
+        if (contains(structid->val.str, VAR))
+        {
+            printSemanticError(16, structid->lineNum, "Duplicated name \"", 2, structid->val.str, "\"");
+        }
+        else
+        {
+            Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
+            
+        }
+    }
+    else if (strEqual(second->unitName, "LC"))//no opttag specified
+    {
+
+    }
+    else
+    {
+        assert(false);
+    }
+    return NULL;
 }
 
 // specifier
@@ -117,7 +179,7 @@ Type* Specifier(Node* n)
     else if (strEqual(node->unitName, "StructSpecifier"))
     {
         ret->kind = STRUCTURE;
-        ret->t.structure = getStruct(node->child);
+        ret->t.structure = StructSpecifier(node);
     }
     else
     {
@@ -201,24 +263,35 @@ void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,=
         ExtDecList(nextid, t);
     }
 }
+
 /*
-StmtList → Stmt StmtList | 空
-Stmt → Exp SEMI
-| CompSt
-| RETURN Exp SEMI
-| IF LP Exp RP Stmt
-| IF LP Exp RP Stmt ELSE Stmt
-| WHILE LP Exp RP Stmt
+Stmt →  Exp SEMI
+        | CompSt
+        | RETURN Exp SEMI
+        | IF LP Exp RP Stmt
+        | IF LP Exp RP Stmt ELSE Stmt
+        | WHILE LP Exp RP Stmt
 */
-void StmtList(Node* node)
+void Stmt(Node* node)
 {
 
 }
-
 void Exp(Node* node)
 {
 
 }
+
+// StmtList → Stmt StmtList | 空
+void StmtList(Node* node)
+{
+    Node* first = node->child;
+    Stmt(first);
+    if (first->sibling != NULL)
+    {
+        StmtList(first->sibling);
+    }
+}
+
 // Dec → VarDec | VarDec ASSIGNOP Exp
 void Dec(Node* node, Type* type)
 {
