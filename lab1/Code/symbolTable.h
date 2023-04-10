@@ -10,6 +10,7 @@ typedef enum
     ARRAY,
     STRUCTURE,
     FUNCTION,
+    BOOLEAN,
 }Kind;
 
 typedef struct Type

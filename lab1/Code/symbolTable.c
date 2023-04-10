@@ -83,9 +83,9 @@ bool searchTableItem(char* name, Kind k)
     return false;
 }
 
-bool serarchStructItem(char* name, Symbol* structinfo)
+bool serarchStructItem(char* name, Symbol* structHead)
 {
-    Symbol* head = structinfo;
+    Symbol* head = structHead;
     while (head != NULL)
     {
         if (strEqual(name, head->name))
@@ -150,7 +150,17 @@ Symbol* getTableSymbol(char* name, Kind k)
     return NULL;
 }
 
-
+Symbol* getStructItem(char* name, Symbol* structHead)
+{
+    Symbol* head = structHead;
+    while (head != NULL)
+    {
+        if (strEqual(name, head->name))
+            return head;
+        head = head->next;
+    }
+    return NULL;
+}
 
 /*
 StructSpecifier → STRUCT OptTag LC DefList RC 定义
@@ -178,7 +188,7 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
         Node* structid = second->child;
         if (searchTableItem(structid->val.str, STRUCTURE))
         {
-            printSemanticError(16, structid->lineNum, "Duplicated name \"", 2, structid->val.str, "\"");
+            printSemanticError(16, structid->lineNum, "Duplicated name \"", 2, structid->val.str, "\".");
         }
         else
         {
@@ -259,7 +269,7 @@ Symbol* Array(Node* node, Type* t, Symbol* structinfo)
         {
             if (serarchStructItem(name, structinfo->type->t.structure))
             {
-                printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\"");
+                printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\".");
             }
             else
             {
@@ -308,7 +318,7 @@ Symbol* VarDec(Node* n, Type* t, Symbol* structinfo)
         {
             if (serarchStructItem(name, structinfo->type->t.structure))
             {
-                printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\"");
+                printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\".");
             }
             else
             {
@@ -342,77 +352,76 @@ void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,=
 
 /*
 Exp → Exp ASSIGNOP Exp  e1 = e2 //TODO:
-
-    | Exp AND Exp       e1 && e2
-    | Exp OR Exp        e || e2
-
     | Exp RELOP Exp     a>b
-
-    | Exp PLUS Exp      a+b
-    | Exp MINUS Exp     a-b
-    | Exp STAR Exp      a*b
-    | Exp DIV Exp       a/b
-
-    | LP Exp RP         (exp)
-
     | MINUS Exp         -a
-    | NOT Exp           !a
 
-    | ID LP Args RP     f(x,y)
-    | ID LP RP          f()
-
-    | Exp LB Exp RB     a[1]
-
-    | Exp DOT ID        a.x
-    | ID                a
-    | INT               1
-    | FLOAT             2.1
 */
+Type* newType()
+{
+    Type* t = (Type*)malloc(sizeof(Type));
+    memset(t, 0x3f, sizeof(Type));
+    return t;
+}
+
 Type* Exp(Node* node)
 {
     assert(strEqual(node->unitName, "Exp"));
-    Type* t = NULL;
+    Type* t = newType();
     Node* first = node->child, * second = first->sibling;
+    /*
+        | ID                a
+        | INT               1
+        | FLOAT             2.1
+    */
     if (strEqual(first->unitName, "FLOAT"))
     {
-        t = (Type*)malloc(sizeof(Type));
         t->kind = BASIC;
         t->t.basicType = FLOAT;
     }
     else if (strEqual(first->unitName, "INT"))
     {
-        t = (Type*)malloc(sizeof(Type));
         t->kind = BASIC;
         t->t.basicType = INT;
     }
-    else if (strEqual(first->unitName, "ID"))
+    else if (second == NULL && strEqual(first->unitName, "ID"))
     {
         Symbol* s = getTableSymbol(first->val.str, VAR);
         if (s == NULL)
         {
-            printSemanticError(1, first->lineNum, "Undefined variable \"", 2, first->val.str, "\"");
+            printSemanticError(1, first->lineNum, "Undefined variable \"", 2, first->val.str, "\".");
         }
         else
         {
+            free(t);
             t = s->type;
         }
     }
-    else if (strEqual(first->unitName, "LP"))
+    else if (strEqual(first->unitName, "LP"))// LP Exp RP   
     {
         return Exp(second);
     }
-    else if (strEqual(first->unitName, "NOT"))
+    else if (strEqual(first->unitName, "NOT"))// NOT Exp    
     {
-        Type* t = Exp(second);
-        if (t->kind != BASIC || t->t.basicType != INT)
+        Type* temp = Exp(second);
+        if (temp->kind != BASIC || temp->t.basicType != INT)
         {
-            printSemanticError(7, second->lineNum, "Type mismatched for operands \"", 2, second->unitName, " expected to be int.\"");
+            printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
+        }
+        else
+        {
+            t->kind = BOOLEAN;
         }
     }
     else if (second != NULL)
     {
         char* op = second->unitName;
         //左右类型必须相同且只能为int 或float
+        /*
+            | Exp PLUS Exp      a+b
+            | Exp MINUS Exp     a-b
+            | Exp STAR Exp      a*b
+            | Exp DIV Exp       a/b
+        */
         if (strEqual(op, "PLUS") || strEqual(op, "MINUS") || strEqual(op, "STAR") || strEqual(op, "DIV"))
         {
             Type* lhs = Exp(first);
@@ -420,9 +429,18 @@ Type* Exp(Node* node)
             Type* rhs = Exp(third);
             if (lhs->kind != BASIC || rhs->kind != BASIC || lhs->t.basicType != rhs->t.basicType)
             {
-                printSemanticError(7, second->lineNum, "Type mismatched for operands \"", 3, first->unitName, " and ", third->unitName);
+                printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
+            }
+            else
+            {
+                t->kind = BASIC;
+                t->t.basicType = lhs->t.basicType;
             }
         }
+        /*
+            | Exp AND Exp       e1 && e2
+            | Exp OR Exp        e || e2
+        */
         else if (strEqual(op, "AND") || strEqual(op, "OR"))
         {
             Type* lhs = Exp(first);
@@ -430,10 +448,14 @@ Type* Exp(Node* node)
             Type* rhs = Exp(third);
             if (lhs->t.basicType != INT || rhs->t.basicType != INT)
             {
-                printSemanticError(7, second->lineNum, "Type mismatched for operands \"", 3, first->unitName, " and ", third->unitName);
+                printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
+            }
+            else
+            {
+                t->kind = BOOLEAN;
             }
         }
-        else if (strEqual(op, "DOT"))
+        else if (strEqual(op, "DOT"))//| Exp DOT ID
         {
             Type* lhs = Exp(first);
             char* fieldname = second->sibling->val.str;
@@ -443,16 +465,62 @@ Type* Exp(Node* node)
             }
             else if (!serarchStructItem(fieldname, lhs->t.structure))
             {
-                printSemanticError(14, second->sibling->lineNum, "Non-existent field \"", 2, fieldname, "\"");
+                printSemanticError(14, second->sibling->lineNum, "Non-existent field \"", 2, fieldname, "\".");
+            }
+            else
+            {
+                Symbol* temp = getStructItem(fieldname, lhs->t.structure);
+                free(t);
+                t = temp->type;
             }
         }
-        else if (strEqual(op, "LB"))//a[1]
+        else if (strEqual(op, "LB"))// Exp LB Exp RB     a[1]
         {
             Node* third = second->sibling;
-            Type* t = Exp(first);
-            if (t->kind != ARRAY)
+            Type* temp = Exp(first);
+            if (temp->kind == ARRAY)
+            {
+                t->kind = temp->t.array.elem->kind;
+                t->t = temp->t.array.elem->t;
+            }
+            else if (temp->kind != ARRAY)
             {
                 printSemanticError(10, first->lineNum, "Expecting an array before \'[\'.", 0);
+            }
+            Type* a = Exp(third);
+            if (a->t.basicType != INT)
+            {
+                printSemanticError(12, third->lineNum, "Expecting an integer in [].", 0);
+            }
+        }
+        /*
+            | ID LP Args RP     f(x,y)
+            | ID LP RP          f()
+        */
+        else if (strEqual(op, "LP"))
+        {
+            Symbol* s = getTableSymbol(first->val.str, FUNCTION);
+            if (s == NULL)
+            {
+                s = getTableSymbol(first->val.str, VAR);
+                if (s != NULL)
+                {
+                    printSemanticError(11, first->lineNum, "It's not a function \"", 2, first->val.str, "\".");
+                }
+                else
+                {
+                    printSemanticError(2, first->lineNum, "Undefined function \"", 2, first->val.str, "\".");
+                }
+            }
+            else
+            {
+                free(t);
+                t = s->type->t.function.returnType;
+                Node* third = second->sibling;
+                if (strEqual(third->unitName, "Args"))//TODO:
+                {
+
+                }
             }
         }
     }
@@ -517,7 +585,7 @@ void Dec(Node* node, Type* type, Symbol* structinfo)
         else                             //in a structure,assignments are not allowed
         {
             printSemanticError(15, first->lineNum, "Initialize variable in struct illegally \"",
-                3, first->unitName, first->sibling->val.str, "\"");
+                3, first->unitName, first->sibling->val.str, "\".");
         }
     }
 }
