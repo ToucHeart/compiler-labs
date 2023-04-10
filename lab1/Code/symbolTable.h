@@ -1,5 +1,8 @@
-#define HASH_TABLE_SIZE 0x3fff
+#ifndef __SYMBOL_TABLE__
+#define __SYMBOL_TABLE__
 
+#include "syntaxTree.h"
+#define HASH_TABLE_SIZE 0x3fff
 typedef enum
 {
     VAR,
@@ -27,7 +30,7 @@ typedef struct Type
             int size;
         } array;
         // 结构体类型信息是一个链表
-        struct FieldList* structure;
+        struct Symbol* structure;
         struct
         {
             int argc;
@@ -52,10 +55,7 @@ typedef struct Parameter
     struct Parameter* next;
 } Parameter;
 
-// 结构体类型信息
-typedef struct FieldList
-{
-    char* name;             // 域的名字
-    Type* type;             // 域的类型
-    struct FieldList* tail; // 下一个域
-} FieldList;
+Symbol* StructSpecifier(Node* node);
+Type* Specifier(Node* n);
+void DefList(Node* node, Symbol* structinfo);
+#endif

@@ -4,7 +4,7 @@ bool hasError = false;
 extern int yyparse();
 extern void yyrestart(FILE*);
 extern int yydebug;
-extern void analyseTree();
+extern void semanticAnalyse();
 
 int main(int argc, char* argv[])
 {
@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     if (!hasError)
     {
         printTree();
-        analyseTree();
+        semanticAnalyse();
     }
     freeMemory();
     return 0;

@@ -4,14 +4,24 @@
 #include <string.h>
 #include <stdbool.h>
 #include <string.h>
-#include "syntaxTree.h"
-#include<stdarg.h>
+#include <stdarg.h>
 
 char* mystrdup(const char* str)
 {
     char* p = (char*)malloc(strlen(str) + 1);
     strcpy(p, str);
     return p;
+}
+
+Symbol* newSymbol(char* name)
+{
+    Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
+    if (name != NULL)
+        sym->name = mystrdup(name);
+    sym->type = (Type*)malloc(sizeof(Type));
+    sym->next = NULL;
+    memset(sym->type, 0, sizeof(Type));
+    return sym;
 }
 
 bool strEqual(const char* str1, const char* str2)
@@ -48,7 +58,7 @@ static unsigned int hash(char* name)
 // global symbol table
 Symbol* SymbolTable[HASH_TABLE_SIZE + 1];
 
-bool contains(char* name, Kind k)
+bool searchTableItem(char* name, Kind k)
 {
     unsigned key = hash(name);
     if (SymbolTable[key] == NULL)
@@ -73,9 +83,37 @@ bool contains(char* name, Kind k)
     return false;
 }
 
+bool serarchStructItem(char* name, Symbol* structinfo)
+{
+    Symbol* head = structinfo->type->t.structure;
+    while (head != NULL)
+    {
+        if (strEqual(name, head->name))
+            return true;
+        head = head->next;
+    }
+    return false;
+}
 
+void insertStructItem(Symbol* structinfo, Symbol* s)
+{
+    Symbol* p = structinfo->type->t.structure;
+    if (p == NULL)
+    {
+        structinfo->type->t.structure = s;
+    }
+    else
+    {
+        while (p->next != NULL)
+        {
+            p = p->next;
+        }
+        p->next = s;
+        s->next = NULL;
+    }
+}
 
-void insert(Symbol* s)
+void insertTableItem(Symbol* s)
 {
     unsigned key = hash(s->name);
     if (SymbolTable[key] == NULL)
@@ -89,7 +127,7 @@ void insert(Symbol* s)
     }
 }
 
-Symbol* searchSymbol(char* name, Kind k)
+Symbol* getTableSymbol(char* name, Kind k)
 {
     unsigned key = hash(name);
     if (SymbolTable[key] == NULL)
@@ -119,12 +157,12 @@ StructSpecifier → STRUCT OptTag LC DefList RC 定义
 OptTag → ID | 空
 Tag → ID
 */
-FieldList* StructSpecifier(Node* node)
+Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
 {
     Node* first = node->child, * second = first->sibling;
     if (strEqual(second->unitName, "Tag"))//use struct defined
     {
-        Symbol* structdef = searchSymbol(second->child->val.str, STRUCTURE);
+        Symbol* structdef = getTableSymbol(second->child->val.str, STRUCTURE);
         if (structdef == NULL)
         {
             printSemanticError(17, second->lineNum, "Undefined structure \"", 2, second->child->val.str, "\".");
@@ -137,19 +175,28 @@ FieldList* StructSpecifier(Node* node)
     else if (strEqual(second->unitName, "OptTag"))//has opttag specified
     {
         Node* structid = second->child;
-        if (contains(structid->val.str, VAR))
+        if (searchTableItem(structid->val.str, VAR))
         {
             printSemanticError(16, structid->lineNum, "Duplicated name \"", 2, structid->val.str, "\"");
         }
         else
         {
-            Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
-            
+            Symbol* sym = newSymbol(structid->val.str);
+            sym->type->kind = STRUCTURE;
+            if (strEqual(second->sibling->sibling->unitName, "DefList"))
+                DefList(second->sibling->sibling, sym);   // TODO:
+            insertTableItem(sym);
+            return sym->type->t.structure;
         }
     }
-    else if (strEqual(second->unitName, "LC"))//no opttag specified
+    else if (strEqual(second->unitName, "LC"))//unnamed struct
     {
-
+        Symbol* sym = newSymbol(NULL);
+        sym->type->kind = STRUCTURE;
+        DefList(second->sibling, sym);   // TODO:
+        Symbol* f = sym->type->t.structure;
+        free(sym);
+        return f;
     }
     else
     {
@@ -187,24 +234,38 @@ Type* Specifier(Node* n)
     }
     return ret;
 }
-
-Symbol* Array(Node* node, Type* t) // VarDec LB INT RB
+// VarDec → ID | VarDec LB INT RB
+Symbol* Array(Node* node, Type* t, Symbol* structinfo)
 {
     if (strEqual(node->unitName, "ID"))
     {
         char* name = node->val.str;
-        if (contains(name, VAR))
+        if (structinfo == NULL)
         {
-            printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
+            if (searchTableItem(name, VAR))
+            {
+                printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
+            }
+            else
+            {
+                Symbol* s = newSymbol(name);
+                s->type = t;
+                insertTableItem(s);
+                return s;
+            }
         }
         else
         {
-            Symbol* s = (Symbol*)malloc(sizeof(Symbol));
-            s->name = mystrdup(name);
-            s->type = t;
-            s->next = NULL;
-            insert(s);
-            return s;
+            if (serarchStructItem(name, structinfo))
+            {
+                printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\"");
+            }
+            else
+            {
+                Symbol* s = newSymbol(node->val.str);
+                s->type = t;
+                insertStructItem(structinfo, s);
+            }
         }
     }
     else if (strEqual(node->unitName, "VarDec"))
@@ -213,7 +274,7 @@ Symbol* Array(Node* node, Type* t) // VarDec LB INT RB
         temp->kind = ARRAY;
         temp->t.array.elem = t;
         temp->t.array.size = node->sibling->sibling->val.int_val;
-        return Array(node->child, temp);
+        return Array(node->child, temp, structinfo);
     }
     else
     {
@@ -221,30 +282,44 @@ Symbol* Array(Node* node, Type* t) // VarDec LB INT RB
     }
     return NULL;
 }
-
-Symbol* VarDec(Node* n, Type* t) // VarDec → ID | VarDec LB INT RB
+// VarDec → ID | VarDec LB INT RB
+Symbol* VarDec(Node* n, Type* t, Symbol* structinfo)
 {
     Node* node = n->child;
     if (strEqual(node->unitName, "ID")) // simple variable
     {
         char* name = node->val.str;
-        if (contains(name, VAR))
+        if (structinfo == NULL)
         {
-            printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
+            if (searchTableItem(name, VAR))
+            {
+                printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
+            }
+            else
+            {
+                Symbol* s = newSymbol(node->val.str);
+                s->type = t;
+                insertTableItem(s);
+                return s;
+            }
         }
         else
         {
-            Symbol* s = (Symbol*)malloc(sizeof(Symbol));
-            s->name = mystrdup(node->val.str);
-            s->next = NULL;
-            s->type = t;
-            insert(s);
-            return s;
+            if (serarchStructItem(name, structinfo))
+            {
+                printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\"");
+            }
+            else
+            {
+                Symbol* s = newSymbol(node->val.str);
+                s->type = t;
+                insertStructItem(structinfo, s);
+            }
         }
     }
     else if (strEqual(node->unitName, "VarDec")) // arrary
     {
-        return Array(node, t);
+        return Array(node, t, structinfo);
     }
     else
     {
@@ -256,7 +331,7 @@ Symbol* VarDec(Node* n, Type* t) // VarDec → ID | VarDec LB INT RB
 // int global1, global2;
 void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,== vardec
 {
-    VarDec(subtree->child, t);
+    VarDec(subtree->child, t, NULL);
     if (subtree->child->sibling != NULL)
     {
         Node* nextid = subtree->child->sibling->sibling; // nextid== ExtDecList
@@ -293,44 +368,52 @@ void StmtList(Node* node)
 }
 
 // Dec → VarDec | VarDec ASSIGNOP Exp
-void Dec(Node* node, Type* type)
+void Dec(Node* node, Type* type, Symbol* structinfo)
 {
     Node* first = node->child;
-    Symbol* s = VarDec(first, type);//TODO:暂存符号,如果不为NULL的话后面会用到
+    Symbol* s = VarDec(first, type, structinfo);//TODO:暂存符号用于后面的check assignment,structinfo!=NULL则不会用到
     if (first->sibling != NULL)
     {
-        Exp(first->sibling->sibling);//TODO: check Assignment legal
+        if (structinfo == NULL)          //in a function
+        {
+            Exp(first->sibling->sibling);//TODO: check Assignment legal
+        }
+        else                             //in a structure,assignments are not allowed
+        {
+            printSemanticError(15, first->lineNum, "Initialize variable in struct illegally \"",
+                3, first->unitName, first->sibling->val.str, "\"");
+        }
     }
 }
 // DecList → Dec | Dec COMMA DecList
-void DecList(Node* node, Type* type)
+void DecList(Node* node, Type* type, Symbol* structinfo)
 {
     assert(strEqual(node->unitName, "DecList"));
     Node* first = node->child;
-    Dec(first, type);
+    Dec(first, type, structinfo);
     if (first->sibling != NULL)
     {
-        DecList(first->sibling->sibling, type);
+        DecList(first->sibling->sibling, type, structinfo);
     }
 }
 // 每个Def就是一条变量定义，它包括一个类型描述符Specifier以及一个DecList
 // Def → Specifier DecList SEMI
-void Def(Node* node)
+void Def(Node* node, Symbol* structinfo)
 {
     assert(strEqual(node->unitName, "Def"));
     Node* first = node->child, * second = first->sibling;
     Type* temp = Specifier(first);
-    DecList(second, temp);
+    DecList(second, temp, structinfo);
 }
 // DefList → Def DefList | 空
-void DefList(Node* node)
+void DefList(Node* node, Symbol* structinfo)
 {
     assert(strEqual(node->unitName, "DefList"));
     Node* def = node->child;
-    Def(def);
+    Def(def, structinfo);
     if (def->sibling != NULL)
     {
-        DefList(def->sibling);
+        DefList(def->sibling, structinfo);
     }
 }
 
@@ -341,7 +424,7 @@ void CompSt(Node* node)
     Node* thirdone = NULL;
     if (strEqual(secondone->unitName, "DefList"))
     {
-        DefList(secondone);
+        DefList(secondone, NULL);
         thirdone = secondone->sibling;
     }
     else if (strEqual(secondone->unitName, "StmtList"))
@@ -358,7 +441,7 @@ void CompSt(Node* node)
 void ParamDec(Node* node, Symbol* s)
 {
     Type* temp = Specifier(node->child);
-    VarDec(node->child->sibling, temp);
+    VarDec(node->child->sibling, temp, NULL);
     Parameter* p = s->type->t.function.params;
     if (p->t == NULL)
     {
@@ -392,16 +475,13 @@ void FunDec(Node* node, Type* retType)
 {
     Node* idnode = node->child;
     char* name = idnode->val.str;
-    if (contains(name, FUNCTION))
+    if (searchTableItem(name, FUNCTION))
     {
         printSemanticError(4, node->lineNum, "Redefined function \"", 2, name, "\".");
     }
     else
     {
-        Symbol* s = (Symbol*)malloc(sizeof(Symbol));
-        s->name = mystrdup(name);
-        s->next = NULL;
-        s->type = (Type*)malloc(sizeof(Type));
+        Symbol* s = newSymbol(name);
         s->type->kind = FUNCTION;
         s->type->t.function.returnType = retType;
         Node* thirdone = idnode->sibling->sibling;
@@ -419,7 +499,7 @@ void FunDec(Node* node, Type* retType)
             VarList(thirdone, s);
         }
         CompSt(node->sibling);
-        insert(s);
+        insertTableItem(s);
     }
 }
 
@@ -439,10 +519,7 @@ void ExtDef(Node* extdef)
     {
         ExtDecList(secondchild, t);
     }
-    else if (strEqual(secondchild->unitName, "SEMI")) // struct definition
-    {
-    }
-    else
+    else if (!strEqual(secondchild->unitName, "SEMI")) // not struct definition
     {
         assert(0);
     }
@@ -463,7 +540,7 @@ void ExtDefList(Node* subtree) // subtree unitName == "ExtDefList"
     }
 }
 extern Node* root;
-void analyseTree()
+void semanticAnalyse()
 {
     if (root != NULL)
         ExtDefList(root->child);
