@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     yyparse();
     if (!hasError)
     {
-        // printTree();
+        printTree();
         semanticAnalyse();
     }
     freeMemory();

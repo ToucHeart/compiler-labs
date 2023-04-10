@@ -85,7 +85,7 @@ bool searchTableItem(char* name, Kind k)
 
 bool serarchStructItem(char* name, Symbol* structinfo)
 {
-    Symbol* head = structinfo->type->t.structure;
+    Symbol* head = structinfo;
     while (head != NULL)
     {
         if (strEqual(name, head->name))
@@ -139,9 +139,10 @@ Symbol* getTableSymbol(char* name, Kind k)
         Symbol* p = SymbolTable[key];
         while (p != NULL)
         {
-            if (strEqual(p->name, name) && k == p->type->kind)
+            if (strEqual(p->name, name))
             {
-                return p;
+                if (k == VAR && p->type->kind != FUNCTION || k == p->type->kind)
+                    return p;
             }
             p = p->next;
         }
@@ -256,7 +257,7 @@ Symbol* Array(Node* node, Type* t, Symbol* structinfo)
         }
         else
         {
-            if (serarchStructItem(name, structinfo))
+            if (serarchStructItem(name, structinfo->type->t.structure))
             {
                 printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\"");
             }
@@ -305,7 +306,7 @@ Symbol* VarDec(Node* n, Type* t, Symbol* structinfo)
         }
         else
         {
-            if (serarchStructItem(name, structinfo))
+            if (serarchStructItem(name, structinfo->type->t.structure))
             {
                 printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\"");
             }
@@ -340,30 +341,158 @@ void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,=
 }
 
 /*
-Stmt →  Exp SEMI
+Exp → Exp ASSIGNOP Exp  e1 = e2 //TODO:
+
+    | Exp AND Exp       e1 && e2
+    | Exp OR Exp        e || e2
+
+    | Exp RELOP Exp     a>b
+
+    | Exp PLUS Exp      a+b
+    | Exp MINUS Exp     a-b
+    | Exp STAR Exp      a*b
+    | Exp DIV Exp       a/b
+
+    | LP Exp RP         (exp)
+
+    | MINUS Exp         -a
+    | NOT Exp           !a
+
+    | ID LP Args RP     f(x,y)
+    | ID LP RP          f()
+
+    | Exp LB Exp RB     a[1]
+
+    | Exp DOT ID        a.x
+    | ID                a
+    | INT               1
+    | FLOAT             2.1
+*/
+Type* Exp(Node* node)
+{
+    assert(strEqual(node->unitName, "Exp"));
+    Type* t = NULL;
+    Node* first = node->child, * second = first->sibling;
+    if (strEqual(first->unitName, "FLOAT"))
+    {
+        t = (Type*)malloc(sizeof(Type));
+        t->kind = BASIC;
+        t->t.basicType = FLOAT;
+    }
+    else if (strEqual(first->unitName, "INT"))
+    {
+        t = (Type*)malloc(sizeof(Type));
+        t->kind = BASIC;
+        t->t.basicType = INT;
+    }
+    else if (strEqual(first->unitName, "ID"))
+    {
+        Symbol* s = getTableSymbol(first->val.str, VAR);
+        if (s == NULL)
+        {
+            printSemanticError(1, first->lineNum, "Undefined variable \"", 2, first->val.str, "\"");
+        }
+        else
+        {
+            t = s->type;
+        }
+    }
+    else if (strEqual(first->unitName, "LP"))
+    {
+        return Exp(second);
+    }
+    else if (strEqual(first->unitName, "NOT"))
+    {
+        Type* t = Exp(second);
+        if (t->kind != BASIC || t->t.basicType != INT)
+        {
+            printSemanticError(7, second->lineNum, "Type mismatched for operands \"", 2, second->unitName, " expected to be int.\"");
+        }
+    }
+    else if (second != NULL)
+    {
+        char* op = second->unitName;
+        //左右类型必须相同且只能为int 或float
+        if (strEqual(op, "PLUS") || strEqual(op, "MINUS") || strEqual(op, "STAR") || strEqual(op, "DIV"))
+        {
+            Type* lhs = Exp(first);
+            Node* third = second->sibling;
+            Type* rhs = Exp(third);
+            if (lhs->kind != BASIC || rhs->kind != BASIC || lhs->t.basicType != rhs->t.basicType)
+            {
+                printSemanticError(7, second->lineNum, "Type mismatched for operands \"", 3, first->unitName, " and ", third->unitName);
+            }
+        }
+        else if (strEqual(op, "AND") || strEqual(op, "OR"))
+        {
+            Type* lhs = Exp(first);
+            Node* third = second->sibling;
+            Type* rhs = Exp(third);
+            if (lhs->t.basicType != INT || rhs->t.basicType != INT)
+            {
+                printSemanticError(7, second->lineNum, "Type mismatched for operands \"", 3, first->unitName, " and ", third->unitName);
+            }
+        }
+        else if (strEqual(op, "DOT"))
+        {
+            Type* lhs = Exp(first);
+            char* fieldname = second->sibling->val.str;
+            if (lhs->kind != STRUCTURE)
+            {
+                printSemanticError(13, first->lineNum, "Illegal use of \".\"", 1, " Expecting a struct varible.");
+            }
+            else if (!serarchStructItem(fieldname, lhs->t.structure))
+            {
+                printSemanticError(14, second->sibling->lineNum, "Non-existent field \"", 2, fieldname, "\"");
+            }
+        }
+        else if (strEqual(op, "LB"))//a[1]
+        {
+            Node* third = second->sibling;
+            Type* t = Exp(first);
+            if (t->kind != ARRAY)
+            {
+                printSemanticError(10, first->lineNum, "Expecting an array before \'[\'.", 0);
+            }
+        }
+    }
+    return t;
+}
+/*
+Stmt →  | Exp SEMI
         | CompSt
         | RETURN Exp SEMI
         | IF LP Exp RP Stmt
         | IF LP Exp RP Stmt ELSE Stmt
         | WHILE LP Exp RP Stmt
 */
-void Stmt(Node* node)
+void Stmt(Node* node, Symbol* funcSym)
 {
+    assert(strEqual(node->unitName, "Stmt"));
+    Node* first = node->child;
+    if (strEqual(first->unitName, "Exp"))
+    {
+        Type* t = Exp(first);
+    }
+    else if (strEqual(first->unitName, "RETURN"))
+    {
 
-}
-void Exp(Node* node)
-{
+    }
+    else if (strEqual(first->unitName, "WHILE"))
+    {
 
+    }
 }
 
 // StmtList → Stmt StmtList | 空
-void StmtList(Node* node)
+void StmtList(Node* node, Symbol* funcSym)
 {
+    assert(strEqual(node->unitName, "StmtList"));
     Node* first = node->child;
-    Stmt(first);
+    Stmt(first, funcSym);
     if (first->sibling != NULL)
     {
-        StmtList(first->sibling);
+        StmtList(first->sibling, funcSym);
     }
 }
 
@@ -372,11 +501,18 @@ void Dec(Node* node, Type* type, Symbol* structinfo)
 {
     Node* first = node->child;
     Symbol* s = VarDec(first, type, structinfo);//TODO:暂存符号用于后面的check assignment,structinfo!=NULL则不会用到
-    if (first->sibling != NULL)
+    if (first->sibling != NULL)                 //a=1这种
     {
         if (structinfo == NULL)          //in a function
         {
-            Exp(first->sibling->sibling);//TODO: check Assignment legal
+            Type* rhstype = Exp(first->sibling->sibling);//TODO: check Assignment legal
+            if (rhstype != NULL)
+            {
+                if (s->type->kind != rhstype->kind || s->type->t.basicType != rhstype->t.basicType)
+                {
+                    printSemanticError(5, first->lineNum, "Type mismatched for assignment \"", 2, first->unitName, " =...\"");
+                }
+            }
         }
         else                             //in a structure,assignments are not allowed
         {
@@ -418,7 +554,7 @@ void DefList(Node* node, Symbol* structinfo)
 }
 
 //CompSt → LC DefList StmtList RC
-void CompSt(Node* node)
+void CompSt(Node* node, Symbol* funcSym)
 {
     Node* secondone = node->child->sibling;
     Node* thirdone = NULL;
@@ -433,7 +569,7 @@ void CompSt(Node* node)
     }
     if (thirdone != NULL && strEqual(thirdone->unitName, "StmtList"))
     {
-        StmtList(thirdone);
+        StmtList(thirdone, funcSym);
     }
 }
 
@@ -469,6 +605,7 @@ void VarList(Node* node, Symbol* s)
         VarList(node->child->sibling->sibling, s);
     }
 }
+// Specifier FunDec CompSt
 //FunDec → ID LP VarList RP 
 //       | ID LP RP
 void FunDec(Node* node, Type* retType)
@@ -498,8 +635,8 @@ void FunDec(Node* node, Type* retType)
             p->t = NULL;
             VarList(thirdone, s);
         }
-        CompSt(node->sibling);
         insertTableItem(s);
+        CompSt(node->sibling, s);
     }
 }
 
