@@ -175,7 +175,7 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
     else if (strEqual(second->unitName, "OptTag"))//has opttag specified
     {
         Node* structid = second->child;
-        if (searchTableItem(structid->val.str, VAR))
+        if (searchTableItem(structid->val.str, STRUCTURE))
         {
             printSemanticError(16, structid->lineNum, "Duplicated name \"", 2, structid->val.str, "\"");
         }
@@ -183,9 +183,9 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
         {
             Symbol* sym = newSymbol(structid->val.str);
             sym->type->kind = STRUCTURE;
+            insertTableItem(sym);
             if (strEqual(second->sibling->sibling->unitName, "DefList"))
                 DefList(second->sibling->sibling, sym);   // TODO:
-            insertTableItem(sym);
             return sym->type->t.structure;
         }
     }
