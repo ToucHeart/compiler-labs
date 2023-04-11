@@ -854,28 +854,29 @@ void FunDec(Node* node, Type* retType)
 {
     Node* idnode = node->child;
     char* name = idnode->val.str;
-    if (searchTableItem(name, FUNCTION))
+    bool has = false;
+    if (has = searchTableItem(name, FUNCTION))
     {
         printSemanticError(4, node->lineNum, "Redefined function \"", 2, name, "\".");
     }
-    else
+    Symbol* s = newSymbol(name);
+    if (!has)
     {
-        Symbol* s = newSymbol(name);
-        s->type->kind = FUNCTION;
-        s->type->t.function.returnType = retType;
-        Node* thirdone = idnode->sibling->sibling;
-        if (strEqual(thirdone->unitName, "RP"))
-        {
-            s->type->t.function.argc = 0;
-            s->type->t.function.params = NULL;
-        }
-        else if (strEqual(thirdone->unitName, "VarList"))
-        {
-            VarList(thirdone, s);
-        }
         insertTableItem(s);
-        CompSt(node->sibling, s);
     }
+    s->type->kind = FUNCTION;
+    s->type->t.function.returnType = retType;
+    Node* thirdone = idnode->sibling->sibling;
+    if (strEqual(thirdone->unitName, "RP"))
+    {
+        s->type->t.function.argc = 0;
+        s->type->t.function.params = NULL;
+    }
+    else if (strEqual(thirdone->unitName, "VarList"))
+    {
+        VarList(thirdone, s);
+    }
+    CompSt(node->sibling, s);
 }
 Parameter* newParameter()
 {
