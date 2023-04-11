@@ -353,7 +353,7 @@ void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,=
 Type* newType()
 {
     Type* t = (Type*)malloc(sizeof(Type));
-    memset(t, 0x0, sizeof(Type));
+    memset(t, 0xff, sizeof(Type));
     return t;
 }
 
@@ -564,7 +564,7 @@ Type* Exp(Node* node)
                 Node* third = second->sibling;
                 if (strEqual(third->unitName, "Args"))//TODO:
                 {
-
+                    
                 }
             }
         }
@@ -652,6 +652,7 @@ void Dec(Node* node, Type* type, Symbol* structinfo)
                     printf("%d\t%d\n", s->type->t.basicType, rhstype->t.basicType);
 #endif
                     printSemanticError(5, first->lineNum, "Type mismatched for assignment.", 0);
+                    free(rhstype);
                 }
             }
         }
