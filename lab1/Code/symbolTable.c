@@ -419,7 +419,9 @@ Type* Exp(Node* node)
         {
             printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
         }
+        t->kind = temp->kind;
         t->isLeftVal = true;
+        t->t.basicType = temp->t.basicType;
     }
     else if (second != NULL)
     {
