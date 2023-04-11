@@ -5,7 +5,7 @@
 #define HASH_TABLE_SIZE 0x3fff
 typedef enum
 {
-    VAR,
+    CANNOT_DUP,
     BASIC,
     ARRAY,
     STRUCTURE,

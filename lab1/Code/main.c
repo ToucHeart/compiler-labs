@@ -8,6 +8,7 @@ extern void semanticAnalyse();
 
 int main(int argc, char* argv[])
 {
+    setbuf(stdout, NULL);
     if (argc <= 1)
     {
         yyparse();

@@ -79,7 +79,7 @@ bool searchTableItem(char* name, Kind k)
         Symbol* p = SymbolTable[key];
         while (p != NULL)
         {
-            if (k == VAR && p->type->kind != FUNCTION || k == p->type->kind)
+            if (k == CANNOT_DUP && p->type->kind != FUNCTION || k == p->type->kind)
             {
                 if (strEqual(p->name, name))
                 {
@@ -150,7 +150,7 @@ Symbol* getTableSymbol(char* name, Kind k)
         {
             if (strEqual(p->name, name))
             {
-                if (k == VAR && p->type->kind != FUNCTION || k == p->type->kind)
+                if (k == CANNOT_DUP && p->type->kind != FUNCTION || k == p->type->kind)
                     return p;
             }
             p = p->next;
@@ -195,7 +195,7 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
     else if (strEqual(second->unitName, "OptTag"))//has opttag specified
     {
         Node* structid = second->child;
-        if (searchTableItem(structid->val.str, STRUCTURE))
+        if (searchTableItem(structid->val.str, CANNOT_DUP))
         {
             printSemanticError(16, structid->lineNum, "Duplicated name \"", 2, structid->val.str, "\".");
         }
@@ -262,7 +262,7 @@ Symbol* Array(Node* node, Type* t, Symbol* structinfo)
         char* name = node->val.str;
         if (structinfo == NULL)
         {
-            if (searchTableItem(name, VAR))
+            if (searchTableItem(name, CANNOT_DUP))
             {
                 printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
             }
@@ -311,7 +311,7 @@ Symbol* VarDec(Node* n, Type* t, Symbol* structinfo)
         char* name = node->val.str;
         if (structinfo == NULL)
         {
-            if (searchTableItem(name, VAR))
+            if (searchTableItem(name, CANNOT_DUP))
             {
                 printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
             }
@@ -466,7 +466,7 @@ Type* Exp(Node* node)
     }
     else if (second == NULL && strEqual(first->unitName, "ID"))
     {
-        Symbol* s = getTableSymbol(first->val.str, VAR);
+        Symbol* s = getTableSymbol(first->val.str, CANNOT_DUP);
         if (s == NULL)
         {
             printSemanticError(1, first->lineNum, "Undefined variable \"", 2, first->val.str, "\".");
@@ -520,7 +520,7 @@ Type* Exp(Node* node)
             }
             else if (lhs->isLeftVal)
             {
-                printSemanticError(6, first->lineNum, "The left-hand side of an assignment must be a variable.", 0);
+                printSemanticError(6, first->lineNum, "Assign to rvalue.", 0);
             }
             else if (lhs->kind == STRUCTURE)
             {
@@ -529,8 +529,7 @@ Type* Exp(Node* node)
                     printSemanticError(5, second->lineNum, "Type mismatched for assignment.", 0);
                 }
             }
-            t->kind = rhs->kind;
-            t->t.basicType = rhs->t.basicType;
+            t = rhs;
         }
         //左右类型必须相同且只能为int 或float
         /*
@@ -637,7 +636,7 @@ Type* Exp(Node* node)
             Symbol* s = getTableSymbol(first->val.str, FUNCTION);
             if (s == NULL)
             {
-                s = getTableSymbol(first->val.str, VAR);
+                s = getTableSymbol(first->val.str, CANNOT_DUP);
                 if (s != NULL)
                 {
                     printSemanticError(11, first->lineNum, first->val.str, 1, " is not a function.");
