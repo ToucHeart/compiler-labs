@@ -61,4 +61,7 @@ Symbol* StructSpecifier(Node* node);
 Type* Specifier(Node* n);
 void DefList(Node* node, Symbol* structinfo);
 void CompSt(Node* node, Symbol* funcSym);
+Type* Exp(Node* node);
+bool checkStructEqual(Symbol* lhs, Symbol* rhs);
+Parameter* newParameter();
 #endif

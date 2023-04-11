@@ -358,7 +358,89 @@ void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,=
         ExtDecList(nextid, t);
     }
 }
+bool checkArrayEqual(Type* lhs, Type* rhs)
+{
+    if (lhs->kind != rhs->kind)
+        return false;
+    else if (lhs->kind == BASIC && lhs->t.basicType != rhs->t.basicType)
+        return false;
+    else if (lhs->kind == ARRAY)
+    {
+        return checkArrayEqual(lhs->t.array.elem, rhs->t.array.elem);
+    }
+    else if (lhs->kind == STRUCTURE)
+    {
+        return checkStructEqual(lhs->t.structure, rhs->t.structure);
+    }
+    return true;
+}
+bool checkStructEqual(Symbol* lhs, Symbol* rhs)
+{
+    bool result = true;
+    if (lhs->type->kind != rhs->type->kind)
+        return false;
+    else if (lhs->type->kind == BASIC && lhs->type->t.basicType != rhs->type->t.basicType)
+        return false;
+    else if (lhs->type->kind == ARRAY)
+        result = result && checkArrayEqual(lhs->type, rhs->type);
+    else if (lhs->type->kind == STRUCTURE)
+        result = result && checkStructEqual(lhs->type->t.structure, rhs->type->t.structure);
+    if (lhs->next && rhs->next)
+        result = result && checkStructEqual(lhs->next, rhs->next);
+    else if (lhs->next == NULL && rhs->next != NULL)
+        result = false;
+    else if (lhs->next != NULL && rhs->next == NULL)
+        result = false;
+    return result;
+}
 
+void Args(Node* node, Parameter* cur)// Args → Exp COMMA Args | Exp
+{
+    if (cur == NULL)//参数给多了
+    {
+        printSemanticError(9, node->lineNum, "Too much arguments.", 0);
+        return;
+    }
+    Node* first = node->child, * second = first->sibling;
+    Type* expType = Exp(first);
+    if (expType->kind != cur->t->kind)//参数类型不匹配
+    {
+        printf("%d\t%d\n", expType->kind, cur->t->kind);//TODO:
+        printSemanticError(9, first->lineNum, "Function arguments do not match.", 0);
+    }
+    else
+    {
+        if (expType->kind == BASIC && expType->t.basicType != cur->t->t.basicType)//参数类型不匹配
+        {
+            // printf("%d\t%d\n", expType->t.basicType, cur->t->t.basicType);
+            printSemanticError(9, first->lineNum, "Function arguments do not match.", 0);
+        }
+        else if (expType->kind == ARRAY)
+        {
+            if (!checkArrayEqual(expType, cur->t))
+            {
+                printSemanticError(9, first->lineNum, "Function arguments do not match,array type mismatch.", 0);
+            }
+        }
+        else if (expType->kind == STRUCTURE)
+        {
+            if (!checkStructEqual(expType->t.structure, cur->t->t.structure))
+            {
+                printSemanticError(9, first->lineNum, "Function arguments do not match,struct type mismatch.", 0);
+            }
+        }
+    }
+    if (second != NULL)
+    {
+        Node* third = second->sibling;
+        Args(third, cur->next);
+    }
+    else if (cur->next != NULL)//参数给少了
+    {
+        printSemanticError(9, node->lineNum, "Too few arguments.", 0);
+        return;
+    }
+}
 
 Type* Exp(Node* node)
 {
@@ -567,9 +649,16 @@ Type* Exp(Node* node)
                     t->isLeftVal = true;
                 }
                 Node* third = second->sibling;
-                if (strEqual(third->unitName, "Args"))//TODO:
+                if (strEqual(third->unitName, "Args"))//TODO:  ID LP Args RP
                 {
-
+                    Args(third, s->type->t.function.params);
+                }
+                else
+                {
+                    if (s->type->t.function.params != NULL)
+                    {
+                        printSemanticError(9, third->lineNum, "Too few arguments.", 0);
+                    }
                 }
             }
         }
@@ -719,11 +808,17 @@ void CompSt(Node* node, Symbol* funcSym)
 void ParamDec(Node* node, Symbol* s)
 {
     Type* temp = Specifier(node->child);
-    VarDec(node->child->sibling, temp, NULL);
+    Symbol* paraSymbol = VarDec(node->child->sibling, temp, NULL);
+    if (paraSymbol == NULL)
+        return;
+    if (s->type->t.function.params == NULL)
+    {
+        s->type->t.function.params = newParameter();
+    }
     Parameter* p = s->type->t.function.params;
     if (p->t == NULL)
     {
-        p->t = temp;
+        p->t = paraSymbol->type;
     }
     else
     {
@@ -731,10 +826,9 @@ void ParamDec(Node* node, Symbol* s)
         {
             p = p->next;
         }
-        Parameter* m = (Parameter*)malloc(sizeof(Parameter));
-        m->t = temp;
-        m->next = NULL;
-        p->next = m;
+        Parameter* pp = newParameter();
+        pp->t = paraSymbol->type;
+        p->next = pp;
     }
 }
 //VarList → ParamDec COMMA VarList
@@ -771,15 +865,18 @@ void FunDec(Node* node, Type* retType)
         }
         else if (strEqual(thirdone->unitName, "VarList"))
         {
-            s->type->t.function.params = (Parameter*)malloc(sizeof(Parameter));
-            Parameter* p = s->type->t.function.params;
-            p->next = NULL;
-            p->t = NULL;
             VarList(thirdone, s);
         }
         insertTableItem(s);
         CompSt(node->sibling, s);
     }
+}
+Parameter* newParameter()
+{
+    Parameter* p = (Parameter*)malloc(sizeof(Parameter));
+    p->next = NULL;
+    p->t = NULL;
+    return p;
 }
 
 // 每个ExtDef表示一个全局变量、结构体或函数的定义
