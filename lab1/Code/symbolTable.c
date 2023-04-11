@@ -195,19 +195,20 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
     else if (strEqual(second->unitName, "OptTag"))//has opttag specified
     {
         Node* structid = second->child;
-        if (searchTableItem(structid->val.str, CANNOT_DUP))
+        bool has = false;
+        if (has = searchTableItem(structid->val.str, CANNOT_DUP))
         {
             printSemanticError(16, structid->lineNum, "Duplicated name \"", 2, structid->val.str, "\".");
         }
-        else
+        Symbol* sym = newSymbol(structid->val.str);
+        if (!has)
         {
-            Symbol* sym = newSymbol(structid->val.str);
-            sym->type->kind = STRUCTURE;
             insertTableItem(sym);
-            if (strEqual(second->sibling->sibling->unitName, "DefList"))
-                DefList(second->sibling->sibling, sym);   // TODO:
-            return sym->type->t.structure;
         }
+        sym->type->kind = STRUCTURE;
+        if (strEqual(second->sibling->sibling->unitName, "DefList"))
+            DefList(second->sibling->sibling, sym);   // TODO:
+        return sym->type->t.structure;
     }
     else if (strEqual(second->unitName, "LC"))//unnamed struct
     {
