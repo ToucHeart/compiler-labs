@@ -647,9 +647,11 @@ void Dec(Node* node, Type* type, Symbol* structinfo)
             {
                 if (s->type->kind != rhstype->kind || s->type->t.basicType != rhstype->t.basicType)
                 {
+#if 0
                     printf("%d\t%d\n", s->type->kind, rhstype->kind);
                     printf("%d\t%d\n", s->type->t.basicType, rhstype->t.basicType);
-                    printSemanticError(5, first->lineNum, "Type mismatched for assignment \"", 2, first->unitName, " =...\"");
+#endif
+                    printSemanticError(5, first->lineNum, "Type mismatched for assignment.", 0);
                 }
             }
         }
