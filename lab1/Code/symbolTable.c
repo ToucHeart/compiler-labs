@@ -405,7 +405,7 @@ void Args(Node* node, Parameter* cur)// Args → Exp COMMA Args | Exp
     Type* expType = Exp(first);
     if (expType->kind != cur->t->kind)//参数类型不匹配
     {
-        printf("%d\t%d\n", expType->kind, cur->t->kind);//TODO:
+        // printf("%d\t%d\n", expType->kind, cur->t->kind);
         printSemanticError(9, first->lineNum, "Function arguments do not match.", 0);
     }
     else
