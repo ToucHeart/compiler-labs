@@ -350,16 +350,10 @@ void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,=
     }
 }
 
-/*
-Exp → Exp ASSIGNOP Exp  e1 = e2 //TODO:
-    | Exp RELOP Exp     a>b
-    | MINUS Exp         -a
-
-*/
 Type* newType()
 {
     Type* t = (Type*)malloc(sizeof(Type));
-    memset(t, 0x3f, sizeof(Type));
+    memset(t, 0x0, sizeof(Type));
     return t;
 }
 
@@ -377,11 +371,13 @@ Type* Exp(Node* node)
     {
         t->kind = BASIC;
         t->t.basicType = FLOAT;
+        t->isLeftVal = true;
     }
     else if (strEqual(first->unitName, "INT"))
     {
         t->kind = BASIC;
         t->t.basicType = INT;
+        t->isLeftVal = true;
     }
     else if (second == NULL && strEqual(first->unitName, "ID"))
     {
@@ -409,12 +405,39 @@ Type* Exp(Node* node)
         }
         else
         {
-            t->kind = BOOLEAN;
+            t->kind = BASIC;
+            t->t.basicType = INT;
+            t->isLeftVal = true;
         }
+    }
+    else if (strEqual(first->unitName, "MINUS"))// MINUS Exp         -a
+    {
+        Type* temp = Exp(second);
+        if (temp->kind != BASIC)
+        {
+            printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
+        }
+        t->isLeftVal = true;
     }
     else if (second != NULL)
     {
         char* op = second->unitName;
+        if (strEqual(op, "ASSIGNOP"))//Exp ASSIGNOP Exp  e1 = e2 
+        {
+            Type* lhs = Exp(first);
+            Node* third = second->sibling;
+            Type* rhs = Exp(third);
+            if (lhs->kind != rhs->kind || lhs->t.basicType != rhs->t.basicType)
+            {
+                printSemanticError(5, second->lineNum, "Type mismatched for assignment.", 0);
+            }
+            else if (lhs->isLeftVal)
+            {
+                printSemanticError(6, first->lineNum, "The left-hand side of an assignment must be a variable.", 0);
+            }
+            t->kind = rhs->kind;
+            t->t.basicType = rhs->t.basicType;
+        }
         //左右类型必须相同且只能为int 或float
         /*
             | Exp PLUS Exp      a+b
@@ -422,7 +445,7 @@ Type* Exp(Node* node)
             | Exp STAR Exp      a*b
             | Exp DIV Exp       a/b
         */
-        if (strEqual(op, "PLUS") || strEqual(op, "MINUS") || strEqual(op, "STAR") || strEqual(op, "DIV"))
+        else if (strEqual(op, "PLUS") || strEqual(op, "MINUS") || strEqual(op, "STAR") || strEqual(op, "DIV"))
         {
             Type* lhs = Exp(first);
             Node* third = second->sibling;
@@ -435,6 +458,7 @@ Type* Exp(Node* node)
             {
                 t->kind = BASIC;
                 t->t.basicType = lhs->t.basicType;
+                t->isLeftVal = true;
             }
         }
         /*
@@ -452,7 +476,9 @@ Type* Exp(Node* node)
             }
             else
             {
-                t->kind = BOOLEAN;
+                t->kind = BASIC;
+                t->t.basicType = INT;
+                t->isLeftVal = true;
             }
         }
         else if (strEqual(op, "DOT"))//| Exp DOT ID
@@ -472,6 +498,21 @@ Type* Exp(Node* node)
                 Symbol* temp = getStructItem(fieldname, lhs->t.structure);
                 free(t);
                 t = temp->type;
+            }
+        }
+        else if (strEqual(op, "RELOP"))// | Exp RELOP Exp     a>b
+        {
+            Type* lhs = Exp(first);
+            Type* rhs = Exp(second->sibling);
+            if (lhs->kind != BASIC || rhs->kind != BASIC)
+            {
+                printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
+            }
+            else
+            {
+                t->kind = BASIC;
+                t->t.basicType = INT;
+                t->isLeftVal = true;
             }
         }
         else if (strEqual(op, "LB"))// Exp LB Exp RB     a[1]
@@ -516,6 +557,10 @@ Type* Exp(Node* node)
             {
                 free(t);
                 t = s->type->t.function.returnType;
+                if (t->kind == BASIC)
+                {
+                    t->isLeftVal = true;
+                }
                 Node* third = second->sibling;
                 if (strEqual(third->unitName, "Args"))//TODO:
                 {
@@ -537,18 +582,42 @@ Stmt →  | Exp SEMI
 void Stmt(Node* node, Symbol* funcSym)
 {
     assert(strEqual(node->unitName, "Stmt"));
-    Node* first = node->child;
+    Node* first = node->child, * second = first->sibling;
     if (strEqual(first->unitName, "Exp"))
     {
-        Type* t = Exp(first);
+        Exp(first);
+    }
+    else if (strEqual(first->unitName, "CompSt"))
+    {
+        CompSt(first, funcSym);
     }
     else if (strEqual(first->unitName, "RETURN"))
     {
-
+        Type* retType = Exp(second);
+        Type* funcRetType = funcSym->type->t.function.returnType;
+        if (retType->kind != funcRetType->kind)
+        {
+            printSemanticError(8, first->lineNum, "Type mismatched for return.", 0);
+        }
+        else if (retType->kind == BASIC && retType->t.basicType != funcRetType->t.basicType)
+        {
+            printSemanticError(8, first->lineNum, "Type mismatched for return.", 0);
+        }
     }
-    else if (strEqual(first->unitName, "WHILE"))
+    else if (strEqual(first->unitName, "WHILE") || strEqual(first->unitName, "IF"))
     {
-
+        Node* third = second->sibling;
+        Type* t = Exp(third);
+        if (t->kind != BASIC || t->t.basicType != INT)
+        {
+            printSemanticError(7, third->lineNum, "Type mismatched for operands,expecting INT.", 0);
+        }
+        Node* five = third->sibling->sibling;
+        Stmt(five, funcSym);
+        if (five->sibling)
+        {
+            Stmt(five->sibling->sibling, funcSym);
+        }
     }
 }
 
@@ -578,6 +647,8 @@ void Dec(Node* node, Type* type, Symbol* structinfo)
             {
                 if (s->type->kind != rhstype->kind || s->type->t.basicType != rhstype->t.basicType)
                 {
+                    printf("%d\t%d\n", s->type->kind, rhstype->kind);
+                    printf("%d\t%d\n", s->type->t.basicType, rhstype->t.basicType);
                     printSemanticError(5, first->lineNum, "Type mismatched for assignment \"", 2, first->unitName, " =...\"");
                 }
             }

@@ -10,12 +10,12 @@ typedef enum
     ARRAY,
     STRUCTURE,
     FUNCTION,
-    BOOLEAN,
 }Kind;
 
 typedef struct Type
 {
     Kind kind;
+    bool isLeftVal;
     union
     {
         // 基本类型
@@ -59,4 +59,5 @@ typedef struct Parameter
 Symbol* StructSpecifier(Node* node);
 Type* Specifier(Node* n);
 void DefList(Node* node, Symbol* structinfo);
+void CompSt(Node* node, Symbol* funcSym);
 #endif
