@@ -353,7 +353,9 @@ void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,=
 Type* newType()
 {
     Type* t = (Type*)malloc(sizeof(Type));
-    memset(t, 0xff, sizeof(Type));
+    memset(t, 0x0, sizeof(Type));
+    t->isLeftVal = false;
+    t->kind = NONE;
     return t;
 }
 
@@ -564,7 +566,7 @@ Type* Exp(Node* node)
                 Node* third = second->sibling;
                 if (strEqual(third->unitName, "Args"))//TODO:
                 {
-                    
+
                 }
             }
         }
@@ -658,8 +660,7 @@ void Dec(Node* node, Type* type, Symbol* structinfo)
         }
         else                             //in a structure,assignments are not allowed
         {
-            printSemanticError(15, first->lineNum, "Initialize variable in struct illegally \"",
-                3, first->unitName, first->sibling->val.str, "\".");
+            printSemanticError(15, first->lineNum, "Initialize variable in struct illegally.", 0);
         }
     }
 }
