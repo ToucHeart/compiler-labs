@@ -514,13 +514,20 @@ Type* Exp(Node* node)
             Type* lhs = Exp(first);
             Node* third = second->sibling;
             Type* rhs = Exp(third);
-            if (lhs->kind != rhs->kind || lhs->t.basicType != rhs->t.basicType)
+            if (lhs->kind != rhs->kind || lhs->kind == BASIC && lhs->t.basicType != rhs->t.basicType)
             {
                 printSemanticError(5, second->lineNum, "Type mismatched for assignment.", 0);
             }
             else if (lhs->isLeftVal)
             {
                 printSemanticError(6, first->lineNum, "The left-hand side of an assignment must be a variable.", 0);
+            }
+            else if (lhs->kind == STRUCTURE)
+            {
+                if (!checkStructEqual(lhs->t.structure, rhs->t.structure))
+                {
+                    printSemanticError(5, second->lineNum, "Type mismatched for assignment.", 0);
+                }
             }
             t->kind = rhs->kind;
             t->t.basicType = rhs->t.basicType;
