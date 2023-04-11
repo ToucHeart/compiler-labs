@@ -13,12 +13,21 @@ char* mystrdup(const char* str)
     return p;
 }
 
+Type* newType()
+{
+    Type* t = (Type*)malloc(sizeof(Type));
+    memset(t, 0x0, sizeof(Type));
+    t->isLeftVal = false;
+    t->kind = NONE;
+    return t;
+}
+
 Symbol* newSymbol(char* name)
 {
     Symbol* sym = (Symbol*)malloc(sizeof(Symbol));
     if (name != NULL)
         sym->name = mystrdup(name);
-    sym->type = (Type*)malloc(sizeof(Type));
+    sym->type = newType();
     sym->next = NULL;
     memset(sym->type, 0, sizeof(Type));
     return sym;
@@ -219,7 +228,7 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
 // specifier
 Type* Specifier(Node* n)
 {
-    Type* ret = (Type*)malloc(sizeof(Type));
+    Type* ret = newType();
     Node* node = n->child;
     if (strEqual(node->unitName, "TYPE"))
     {
@@ -281,7 +290,7 @@ Symbol* Array(Node* node, Type* t, Symbol* structinfo)
     }
     else if (strEqual(node->unitName, "VarDec"))
     {
-        Type* temp = (Type*)malloc(sizeof(Type));
+        Type* temp = newType();
         temp->kind = ARRAY;
         temp->t.array.elem = t;
         temp->t.array.size = node->sibling->sibling->val.int_val;
@@ -350,14 +359,6 @@ void ExtDecList(Node* subtree, Type* t) // subtree is firstchild of ExtDecList,=
     }
 }
 
-Type* newType()
-{
-    Type* t = (Type*)malloc(sizeof(Type));
-    memset(t, 0x0, sizeof(Type));
-    t->isLeftVal = false;
-    t->kind = NONE;
-    return t;
-}
 
 Type* Exp(Node* node)
 {
