@@ -550,7 +550,7 @@ Type* Exp(Node* node)
                 s = getTableSymbol(first->val.str, VAR);
                 if (s != NULL)
                 {
-                    printSemanticError(11, first->lineNum, "It's not a function \"", 2, first->val.str, "\".");
+                    printSemanticError(11, first->lineNum, first->val.str, 1, " is not a function.");
                 }
                 else
                 {
@@ -647,14 +647,10 @@ void Dec(Node* node, Type* type, Symbol* structinfo)
         if (structinfo == NULL)          //in a function
         {
             Type* rhstype = Exp(first->sibling->sibling);//TODO: check Assignment legal
-            if (rhstype != NULL)
+            if (rhstype != NULL && s != NULL)
             {
                 if (s->type->kind != rhstype->kind || s->type->t.basicType != rhstype->t.basicType)
                 {
-#if 0
-                    printf("%d\t%d\n", s->type->kind, rhstype->kind);
-                    printf("%d\t%d\n", s->type->t.basicType, rhstype->t.basicType);
-#endif
                     printSemanticError(5, first->lineNum, "Type mismatched for assignment.", 0);
                     free(rhstype);
                 }
@@ -662,7 +658,7 @@ void Dec(Node* node, Type* type, Symbol* structinfo)
         }
         else                             //in a structure,assignments are not allowed
         {
-            printSemanticError(15, first->lineNum, "Initialize variable in struct illegally.", 0);
+            printSemanticError(15, first->lineNum, "Initialized field \"", 2, first->child->val.str, "\".");
         }
     }
 }

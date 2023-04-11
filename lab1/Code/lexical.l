@@ -58,7 +58,6 @@ RC "}"
 ID {LETTER}{LETTERSEC}*
 INT 0|[1-9]+[0-9]*
 FLOAT {DIGIT}+"."{DIGIT}+|{DIGIT}*"."{DIGIT}+[eE][+-]?{DIGIT}+|{DIGIT}+"."{DIGIT}*[eE][+-]?{DIGIT}+
-WRONG_FLOAT  {DIGIT}+"."|"."{DIGIT}+|{FLOAT}"."{DIGIT}*|"."[eE][+-]?{DIGIT}*|{FLOAT}[Ee][+-]
 %%
 {INT} { yylval.nodePtr =getLexicalUnitNode(yylineno,"INT",TOKEN_TYPE_INT,yytext); return INT;}
 {FLOAT} {yylval.nodePtr=getLexicalUnitNode(yylineno,"FLOAT",TOKEN_TYPE_FLOAT,yytext); return FLOAT;}
@@ -89,6 +88,5 @@ WRONG_FLOAT  {DIGIT}+"."|"."{DIGIT}+|{FLOAT}"."{DIGIT}*|"."[eE][+-]?{DIGIT}*|{FL
 {RP} {yylval.nodePtr=getLexicalUnitNode(yylineno,"RP",TOKEN_TYPE_OTHER,yytext);  return RP;}
 {LC} {yylval.nodePtr=getLexicalUnitNode(yylineno,"LC",TOKEN_TYPE_OTHER,yytext);  return LC;}
 {RC} {yylval.nodePtr=getLexicalUnitNode(yylineno,"RC",TOKEN_TYPE_OTHER,yytext);  return RC;}
-{WRONG_FLOAT}  { printLexicalError("Illegal float number",yytext); yylval.nodePtr=getLexicalUnitNode(yylineno,"WRONG_FLOAT",TOKEN_TYPE_FLOAT,yytext);  return FLOAT; }
-.              { printLexicalError("Mysterious character",yytext); }
+.    { printLexicalError("Mysterious character",yytext); }
 %%
