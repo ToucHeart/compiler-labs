@@ -16,7 +16,7 @@ typedef enum
 typedef struct Type
 {
     Kind kind;
-    bool isLeftVal;
+    bool isRval;
     union
     {
         // 基本类型

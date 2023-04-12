@@ -17,7 +17,7 @@ Type* newType()
 {
     Type* t = (Type*)malloc(sizeof(Type));
     memset(t, 0x0, sizeof(Type));
-    t->isLeftVal = false;
+    t->isRval = false;
     t->kind = NONE;
     return t;
 }
@@ -457,13 +457,13 @@ Type* Exp(Node* node)
     {
         t->kind = BASIC;
         t->t.basicType = FLOAT;
-        t->isLeftVal = true;
+        t->isRval = true;
     }
     else if (strEqual(first->unitName, "INT"))
     {
         t->kind = BASIC;
         t->t.basicType = INT;
-        t->isLeftVal = true;
+        t->isRval = true;
     }
     else if (second == NULL && strEqual(first->unitName, "ID"))
     {
@@ -493,7 +493,7 @@ Type* Exp(Node* node)
         {
             t->kind = BASIC;
             t->t.basicType = INT;
-            t->isLeftVal = true;
+            t->isRval = true;
         }
     }
     else if (strEqual(first->unitName, "MINUS"))// MINUS Exp         -a
@@ -504,7 +504,7 @@ Type* Exp(Node* node)
             printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
         }
         t->kind = temp->kind;
-        t->isLeftVal = true;
+        t->isRval = true;
         t->t.basicType = temp->t.basicType;
     }
     else if (second != NULL)
@@ -519,7 +519,7 @@ Type* Exp(Node* node)
             {
                 printSemanticError(5, second->lineNum, "Type mismatched for assignment.", 0);
             }
-            else if (lhs->isLeftVal)
+            else if (lhs->isRval)
             {
                 printSemanticError(6, first->lineNum, "Assign to rvalue.", 0);
             }
@@ -552,7 +552,7 @@ Type* Exp(Node* node)
             {
                 t->kind = BASIC;
                 t->t.basicType = lhs->t.basicType;
-                t->isLeftVal = true;
+                t->isRval = true;
             }
         }
         /*
@@ -572,7 +572,7 @@ Type* Exp(Node* node)
             {
                 t->kind = BASIC;
                 t->t.basicType = INT;
-                t->isLeftVal = true;
+                t->isRval = true;
             }
         }
         else if (strEqual(op, "DOT"))//| Exp DOT ID
@@ -606,7 +606,7 @@ Type* Exp(Node* node)
             {
                 t->kind = BASIC;
                 t->t.basicType = INT;
-                t->isLeftVal = true;
+                t->isRval = true;
             }
         }
         else if (strEqual(op, "LB"))// Exp LB Exp RB     a[1]
@@ -653,7 +653,7 @@ Type* Exp(Node* node)
                 t = s->type->t.function.returnType;
                 if (t->kind == BASIC)
                 {
-                    t->isLeftVal = true;
+                    t->isRval = true;
                 }
                 Node* third = second->sibling;
                 if (strEqual(third->unitName, "Args"))//TODO:  ID LP Args RP
