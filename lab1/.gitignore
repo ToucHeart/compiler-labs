@@ -14,3 +14,4 @@ a.c
 a.out
 !.vscode/launch.json
 !.vscode/tasks.json
+!*.sh
