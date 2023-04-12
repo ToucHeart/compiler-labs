@@ -207,14 +207,14 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
         }
         sym->type->kind = STRUCTURE;
         if (strEqual(second->sibling->sibling->unitName, "DefList"))
-            DefList(second->sibling->sibling, sym);   // TODO:
+            DefList(second->sibling->sibling, sym);   //
         return sym->type->t.structure;
     }
     else if (strEqual(second->unitName, "LC"))//unnamed struct
     {
         Symbol* sym = newSymbol(NULL);
         sym->type->kind = STRUCTURE;
-        DefList(second->sibling, sym);   // TODO:
+        DefList(second->sibling, sym);   //
         Symbol* f = sym->type->t.structure;
         free(sym);
         return f;
@@ -656,7 +656,7 @@ Type* Exp(Node* node)
                     t->isRval = true;
                 }
                 Node* third = second->sibling;
-                if (strEqual(third->unitName, "Args"))//TODO:  ID LP Args RP
+                if (strEqual(third->unitName, "Args"))//
                 {
                     Args(third, s->type->t.function.params);
                 }
@@ -738,12 +738,12 @@ void StmtList(Node* node, Symbol* funcSym)
 void Dec(Node* node, Type* type, Symbol* structinfo)
 {
     Node* first = node->child;
-    Symbol* s = VarDec(first, type, structinfo);//TODO:暂存符号用于后面的check assignment,structinfo!=NULL则不会用到
+    Symbol* s = VarDec(first, type, structinfo);//暂存符号用于后面的check assignment,structinfo!=NULL则不会用到
     if (first->sibling != NULL)                 //a=1这种
     {
         if (structinfo == NULL)          //in a function
         {
-            Type* rhstype = Exp(first->sibling->sibling);//TODO: check Assignment legal
+            Type* rhstype = Exp(first->sibling->sibling);//check Assignment legal
             if (rhstype != NULL && s != NULL)
             {
                 if (s->type->kind != rhstype->kind || s->type->t.basicType != rhstype->t.basicType)
