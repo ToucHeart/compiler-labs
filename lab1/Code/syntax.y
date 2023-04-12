@@ -66,6 +66,7 @@ ExtDef : Specifier ExtDecList SEMI  {$$ = getSyntaxUnitNode(@$.first_line, "ExtD
 | Specifier SEMI                    {$$ = getSyntaxUnitNode(@$.first_line, "ExtDef",NOT_TOKEN,2, $1,$2);}
 | Specifier FunDec CompSt           {$$ = getSyntaxUnitNode(@$.first_line, "ExtDef",NOT_TOKEN,3, $1,$2,$3);}
 |  error SEMI                       {}
+| Specifier FunDec error SEMI       {}
 ;
 ExtDecList :    VarDec              {$$ = getSyntaxUnitNode(@$.first_line, "ExtDecList",NOT_TOKEN,1, $1);}
 | VarDec COMMA ExtDecList           {$$ = getSyntaxUnitNode(@$.first_line, "ExtDecList",NOT_TOKEN,3, $1,$2,$3);}
@@ -137,6 +138,7 @@ Exp : Exp ASSIGNOP Exp           {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT
 | ID                             {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,1,$1);}   
 | INT                            {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,1,$1);}           
 | FLOAT                          {$$ = getSyntaxUnitNode(@$.first_line,"Exp",NOT_TOKEN,1,$1);}
+| Exp LB Exp error RB            {}
 ;
 Args : Exp COMMA Args            {$$ = getSyntaxUnitNode(@$.first_line,"Args",NOT_TOKEN,3,$1,$2,$3);}
 | Exp                            {$$ = getSyntaxUnitNode(@$.first_line,"Args",NOT_TOKEN,1,$1);}
