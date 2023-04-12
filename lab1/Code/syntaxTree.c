@@ -111,7 +111,7 @@ void printNode(Node *subroot, int depth)
         return;
     for (int i = 0; i < depth; i++)
     {
-        printf("\t");
+        printf("  ");
     }
     switch (subroot->type)
     {
