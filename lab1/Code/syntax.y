@@ -113,6 +113,7 @@ DefList : Def DefList            {$$ = getSyntaxUnitNode(@$.first_line,"DefList"
 |                                {$$ = NULL;}
 ;
 Def : Specifier DecList SEMI     {$$ = getSyntaxUnitNode(@$.first_line,"Def",NOT_TOKEN,3,$1,$2,$3);}
+|  Specifier error SEMI          {}
 ;
 DecList : Dec                    {$$ = getSyntaxUnitNode(@$.first_line,"DecList",NOT_TOKEN,1,$1);}
 | Dec COMMA DecList              {$$ = getSyntaxUnitNode(@$.first_line,"DecList",NOT_TOKEN,3,$1,$2,$3);}
