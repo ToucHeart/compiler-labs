@@ -602,6 +602,10 @@ Type* Exp(Node* node)
             {
                 printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
             }
+            else if (lhs->t.basicType != rhs->t.basicType)
+            {
+                printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
+            }
             else
             {
                 t->kind = BASIC;
