@@ -598,11 +598,7 @@ Type* Exp(Node* node)
         {
             Type* lhs = Exp(first);
             Type* rhs = Exp(second->sibling);
-            if (lhs->kind != BASIC || rhs->kind != BASIC)
-            {
-                printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
-            }
-            else if (lhs->t.basicType != rhs->t.basicType)
+            if (lhs->kind != BASIC || rhs->kind != BASIC || lhs->t.basicType != rhs->t.basicType)
             {
                 printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
             }
