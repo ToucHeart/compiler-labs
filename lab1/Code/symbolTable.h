@@ -64,4 +64,14 @@ void CompSt(Node* node, Symbol* funcSym);
 Type* Exp(Node* node);
 bool checkStructEqual(Symbol* lhs, Symbol* rhs);
 Parameter* newParameter();
+Symbol* newSymbol(char* name);
+Type* newType();
+bool strEqual(const char* str1, const char* str2);
+bool searchTableItem(char* name, Kind k);
+bool serarchStructItem(char* name, Symbol* structHead);
+void insertStructItem(Symbol* structinfo, Symbol* s);
+void insertTableItem(Symbol* s);
+Symbol* getTableSymbol(char* name, Kind k);
+Symbol* getStructItem(char* name, Symbol* structHead);
+
 #endif

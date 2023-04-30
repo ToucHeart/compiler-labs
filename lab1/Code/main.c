@@ -9,18 +9,24 @@ extern void semanticAnalyse();
 int main(int argc, char* argv[])
 {
     setbuf(stdout, NULL);
-    if (argc <= 1)
+    if (argc != 3)
     {
-        yyparse();
+        fprintf(stderr, "pass 3 arguments\n");
         return 1;
     }
-    FILE* f = fopen(argv[1], "r");
-    if (!f)
+    FILE* input = fopen(argv[1], "r");
+    FILE* output = fopen(argv[2], "w+");
+    if (!input)
     {
         perror(argv[1]);
         return 1;
     }
-    yyrestart(f);
+    if (!output)
+    {
+        perror(argv[2]);
+        return 1;
+    }
+    yyrestart(input);
     yyparse();
     if (!hasError)
     {
