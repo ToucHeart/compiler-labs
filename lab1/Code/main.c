@@ -5,6 +5,8 @@ extern int yyparse();
 extern void yyrestart(FILE*);
 extern int yydebug;
 extern void semanticAnalyse();
+extern void genInterCodes();
+extern void printInterCodes(FILE* output);
 
 int main(int argc, char* argv[])
 {
@@ -32,6 +34,8 @@ int main(int argc, char* argv[])
     {
         // printTree();
         semanticAnalyse();
+        genInterCodes();
+        printInterCodes(output);
     }
     freeMemory();
     return 0;
