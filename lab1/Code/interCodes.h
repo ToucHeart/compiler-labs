@@ -37,9 +37,15 @@ typedef struct InterCode
         IR_DIV,
         IR_FUNCTION,
         IR_PARAM,
+        IR_DEC,
     } kind;
     union
     {
+        struct
+        {
+            OperandPtr varName;
+            int size;
+        }dec;
         struct
         {
             OperandPtr op;

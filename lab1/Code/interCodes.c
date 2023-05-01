@@ -42,6 +42,10 @@ InterCodePtr newInterCode(int kind, ...)
     p->u.assign.left = va_arg(ap, OperandPtr);
     p->u.assign.right = va_arg(ap, OperandPtr);
     break;
+    case IR_DEC:
+    p->u.dec.varName = va_arg(ap, OperandPtr);
+    p->u.dec.size = va_arg(ap, int);
+    break;
     default:
     assert(0);
     break;
@@ -87,7 +91,7 @@ void addInterCodes(InterCodesPtr p)
 }
 
 //VarDec → ID | VarDec LB INT RB
-void translateVarDec(Node* node, OperandPtr op)
+void translateVarDec(Node* node, OperandPtr op, bool isParam)
 {
     assert(strEqual(node->unitName, "VarDec"));
     Node* first = node->child;
@@ -97,15 +101,47 @@ void translateVarDec(Node* node, OperandPtr op)
         Symbol* sym = getTableSymbol(first->val.str, TYPE_CANNOT_DUP);
         switch (sym->type->kind)
         {
-            if (op != NULL)
+        case TYPE_BASIC:
+        if (op != NULL)//有初始值变量或者是形参
+        {
+            op->u.name = mystrdup(first->val.str);
+        }
+        break;
+        case TYPE_ARRAY://需要分配空间
+        {
+            if (isParam)//是形参,op!=NULL
             {
                 op->u.name = mystrdup(first->val.str);
             }
+            else//是变量定义,op==NULL
+            {
+                OperandPtr arr = newOperand(OP_VARIABLE, 0, mystrdup(first->val.str));
+                InterCodePtr code = newInterCode(IR_DEC, arr, getTypeSize(sym->type));
+                InterCodesPtr codes = newInterCodes(code);
+                addInterCodes(codes);
+            }
+        }
+        break;
+        case TYPE_STRUCTURE:
+        {
+            if (isParam)
+            {
+                op->u.name = mystrdup(first->val.str);
+            }
+            else
+            {
+                OperandPtr structvar = newOperand(OP_VARIABLE, 0, mystrdup(first->val.str));
+                InterCodePtr code = newInterCode(IR_DEC, structvar, getTypeSize(sym->type));
+                InterCodesPtr codes = newInterCodes(code);
+                addInterCodes(codes);
+            }
+        }
+        break;
         }
     }
     else
     {
-        translateVarDec(first, op);
+        translateVarDec(first, op, isParam);
     }
 }
 
@@ -115,7 +151,7 @@ void translateParamDec(Node* node)
     assert(strEqual(node->unitName, "ParamDec"));
     Node* second = node->child->sibling;
     OperandPtr op = newOperand(OP_VARIABLE, 0, NULL);
-    translateVarDec(second, op);
+    translateVarDec(second, op, true);
     InterCodePtr code = newInterCode(IR_PARAM, op);
     InterCodesPtr codes = newInterCodes(code);
     addInterCodes(codes);
@@ -161,13 +197,13 @@ void translateDec(Node* node)
     Node* first = node->child, * second = first->sibling;
     if (second == NULL)
     {
-        translateVarDec(first, NULL);
+        translateVarDec(first, NULL, false);
     }
     else
     {
         Node* third = second->sibling;
         OperandPtr left = newOperand(OP_VARIABLE, 0, NULL);
-        translateVarDec(first, left);
+        translateVarDec(first, left, false);
         OperandPtr right = newOperand(OP_NONE, 0, NULL);
         translateExp(third, right);
         InterCodePtr code = newInterCode(IR_ASSIGN, left, right);
@@ -266,7 +302,6 @@ void genInterCodes()
     initList(&list);
     if (root != NULL)
     {
-        assert(strEqual(root->unitName, "Program"));
         translateExtDefList(root->child);
     }
 }
@@ -302,7 +337,9 @@ void printInterCode(FILE* output, InterCodePtr p)
     fprintf(output, "PARAM ");
     printOp(output, p->u.oneop.op);
     break;
-
+    case IR_DEC:
+    fprintf(output, "DEC %s %d", p->u.dec.varName->u.name, p->u.dec.size);
+    break;
     default:
     fprintf(stderr, RED"code type is %d\n"NORMAL, p->kind);
     assert(0);

@@ -73,5 +73,5 @@ void insertStructItem(Symbol* structinfo, Symbol* s);
 void insertTableItem(Symbol* s);
 Symbol* getTableSymbol(char* name, Kind k);
 Symbol* getStructItem(char* name, Symbol* structHead);
-
+int getTypeSize(Type* t);
 #endif

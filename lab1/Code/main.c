@@ -28,6 +28,7 @@ int main(int argc, char* argv[])
         perror(argv[2]);
         return 1;
     }
+    setbuf(output, NULL);
     yyrestart(input);
     yyparse();
     if (!hasError)

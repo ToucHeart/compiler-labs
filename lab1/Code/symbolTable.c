@@ -155,3 +155,31 @@ Symbol* getStructItem(char* name, Symbol* structHead)
     }
     return NULL;
 }
+
+int getTypeSize(Type* t)
+{
+    switch (t->kind)
+    {
+    case TYPE_BASIC:
+    return 4;
+    break;
+    case TYPE_ARRAY:
+    return t->t.array.size * getTypeSize(t->t.array.elem);
+    break;
+    case TYPE_STRUCTURE:
+    {
+        int size = 0;
+        Symbol* s = t->t.structure;
+        while (s != NULL)
+        {
+            size += getTypeSize(s->type);
+            s = s->next;
+        }
+        return size;
+    }
+    default:
+    assert(0);
+    break;
+    }
+    return 0;
+}
