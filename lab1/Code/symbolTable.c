@@ -14,7 +14,7 @@ Type* newType()
     Type* t = (Type*)malloc(sizeof(Type));
     memset(t, 0x0, sizeof(Type));
     t->isRval = false;
-    t->kind = OP_NONE;
+    t->kind = TYPE_NONE;
     return t;
 }
 
@@ -64,7 +64,7 @@ bool searchTableItem(char* name, Kind k)
         Symbol* p = SymbolTable[key];
         while (p != NULL)
         {
-            if (k == CANNOT_DUP && p->type->kind != FUNCTION || k == p->type->kind)
+            if (k == TYPE_CANNOT_DUP && p->type->kind != TYPE_FUNCTION || k == p->type->kind)
             {
                 if (strEqual(p->name, name))
                 {
@@ -135,7 +135,7 @@ Symbol* getTableSymbol(char* name, Kind k)
         {
             if (strEqual(p->name, name))
             {
-                if (k == CANNOT_DUP && p->type->kind != FUNCTION || k == p->type->kind)
+                if (k == TYPE_CANNOT_DUP && p->type->kind != TYPE_FUNCTION || k == p->type->kind)//变量名和函数名可以重复
                     return p;
             }
             p = p->next;

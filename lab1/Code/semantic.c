@@ -33,7 +33,7 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
     Node* first = node->child, * second = first->sibling;
     if (strEqual(second->unitName, "Tag"))//use struct defined
     {
-        Symbol* structdef = getTableSymbol(second->child->val.str, STRUCTURE);
+        Symbol* structdef = getTableSymbol(second->child->val.str, TYPE_STRUCTURE);
         if (structdef == NULL)
         {
             printSemanticError(17, second->lineNum, "Undefined structure \"", 2, second->child->val.str, "\".");
@@ -47,7 +47,7 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
     {
         Node* structid = second->child;
         bool has = false;
-        if (has = searchTableItem(structid->val.str, CANNOT_DUP))
+        if (has = searchTableItem(structid->val.str, TYPE_CANNOT_DUP))
         {
             printSemanticError(16, structid->lineNum, "Duplicated name \"", 2, structid->val.str, "\".");
         }
@@ -56,7 +56,7 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
         {
             insertTableItem(sym);
         }
-        sym->type->kind = STRUCTURE;
+        sym->type->kind = TYPE_STRUCTURE;
         if (strEqual(second->sibling->sibling->unitName, "DefList"))
             DefList(second->sibling->sibling, sym);   //
         return sym->type->t.structure;
@@ -64,7 +64,7 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
     else if (strEqual(second->unitName, "LC"))//unnamed struct
     {
         Symbol* sym = newSymbol(NULL);
-        sym->type->kind = STRUCTURE;
+        sym->type->kind = TYPE_STRUCTURE;
         DefList(second->sibling, sym);   //
         Symbol* f = sym->type->t.structure;
         free(sym);
@@ -86,18 +86,18 @@ Type* Specifier(Node* n)
     {
         if (strEqual(node->val.str, "int"))
         {
-            ret->kind = BASIC;
+            ret->kind = TYPE_BASIC;
             ret->t.basicType = INT;
         }
         else if (strEqual(node->val.str, "float"))
         {
-            ret->kind = BASIC;
+            ret->kind = TYPE_BASIC;
             ret->t.basicType = FLOAT;
         }
     }
     else if (strEqual(node->unitName, "StructSpecifier"))
     {
-        ret->kind = STRUCTURE;
+        ret->kind = TYPE_STRUCTURE;
         ret->t.structure = StructSpecifier(node);
     }
     else
@@ -114,7 +114,7 @@ Symbol* Array(Node* node, Type* t, Symbol* structinfo)
         char* name = node->val.str;
         if (structinfo == NULL)
         {
-            if (searchTableItem(name, CANNOT_DUP))
+            if (searchTableItem(name, TYPE_CANNOT_DUP))
             {
                 printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
             }
@@ -143,7 +143,7 @@ Symbol* Array(Node* node, Type* t, Symbol* structinfo)
     else if (strEqual(node->unitName, "VarDec"))
     {
         Type* temp = newType();
-        temp->kind = ARRAY;
+        temp->kind = TYPE_ARRAY;
         temp->t.array.elem = t;
         temp->t.array.size = node->sibling->sibling->val.int_val;
         return Array(node->child, temp, structinfo);
@@ -163,7 +163,7 @@ Symbol* VarDec(Node* n, Type* t, Symbol* structinfo)
         char* name = node->val.str;
         if (structinfo == NULL)
         {
-            if (searchTableItem(name, CANNOT_DUP))
+            if (searchTableItem(name, TYPE_CANNOT_DUP))
             {
                 printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
             }
@@ -214,13 +214,13 @@ bool checkArrayEqual(Type* lhs, Type* rhs)
 {
     if (lhs->kind != rhs->kind)
         return false;
-    else if (lhs->kind == BASIC && lhs->t.basicType != rhs->t.basicType)
+    else if (lhs->kind == TYPE_BASIC && lhs->t.basicType != rhs->t.basicType)
         return false;
-    else if (lhs->kind == ARRAY)
+    else if (lhs->kind == TYPE_ARRAY)
     {
         return checkArrayEqual(lhs->t.array.elem, rhs->t.array.elem);
     }
-    else if (lhs->kind == STRUCTURE)
+    else if (lhs->kind == TYPE_STRUCTURE)
     {
         return checkStructEqual(lhs->t.structure, rhs->t.structure);
     }
@@ -231,11 +231,11 @@ bool checkStructEqual(Symbol* lhs, Symbol* rhs)
     bool result = true;
     if (lhs->type->kind != rhs->type->kind)
         return false;
-    else if (lhs->type->kind == BASIC && lhs->type->t.basicType != rhs->type->t.basicType)
+    else if (lhs->type->kind == TYPE_BASIC && lhs->type->t.basicType != rhs->type->t.basicType)
         return false;
-    else if (lhs->type->kind == ARRAY)
+    else if (lhs->type->kind == TYPE_ARRAY)
         result = result && checkArrayEqual(lhs->type, rhs->type);
-    else if (lhs->type->kind == STRUCTURE)
+    else if (lhs->type->kind == TYPE_STRUCTURE)
         result = result && checkStructEqual(lhs->type->t.structure, rhs->type->t.structure);
     if (lhs->next && rhs->next)
         result = result && checkStructEqual(lhs->next, rhs->next);
@@ -262,19 +262,19 @@ void Args(Node* node, Parameter* cur)// Args → Exp COMMA Args | Exp
     }
     else
     {
-        if (expType->kind == BASIC && expType->t.basicType != cur->t->t.basicType)//参数类型不匹配
+        if (expType->kind == TYPE_BASIC && expType->t.basicType != cur->t->t.basicType)//参数类型不匹配
         {
             // printf("%d\t%d\n", expType->t.basicType, cur->t->t.basicType);
             printSemanticError(9, first->lineNum, "Function arguments do not match.", 0);
         }
-        else if (expType->kind == ARRAY)
+        else if (expType->kind == TYPE_ARRAY)
         {
             if (!checkArrayEqual(expType, cur->t))
             {
                 printSemanticError(9, first->lineNum, "Function arguments do not match,array type mismatch.", 0);
             }
         }
-        else if (expType->kind == STRUCTURE)
+        else if (expType->kind == TYPE_STRUCTURE)
         {
             if (!checkStructEqual(expType->t.structure, cur->t->t.structure))
             {
@@ -306,19 +306,19 @@ Type* Exp(Node* node)
     */
     if (strEqual(first->unitName, "FLOAT"))
     {
-        t->kind = BASIC;
+        t->kind = TYPE_BASIC;
         t->t.basicType = FLOAT;
         t->isRval = true;
     }
     else if (strEqual(first->unitName, "INT"))
     {
-        t->kind = BASIC;
+        t->kind = TYPE_BASIC;
         t->t.basicType = INT;
         t->isRval = true;
     }
     else if (second == NULL && strEqual(first->unitName, "ID"))
     {
-        Symbol* s = getTableSymbol(first->val.str, CANNOT_DUP);
+        Symbol* s = getTableSymbol(first->val.str, TYPE_CANNOT_DUP);
         if (s == NULL)
         {
             printSemanticError(1, first->lineNum, "Undefined variable \"", 2, first->val.str, "\".");
@@ -336,13 +336,13 @@ Type* Exp(Node* node)
     else if (strEqual(first->unitName, "NOT"))// NOT Exp    
     {
         Type* temp = Exp(second);
-        if (temp->kind != BASIC || temp->t.basicType != INT)
+        if (temp->kind != TYPE_BASIC || temp->t.basicType != INT)
         {
             printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
         }
         else
         {
-            t->kind = BASIC;
+            t->kind = TYPE_BASIC;
             t->t.basicType = INT;
             t->isRval = true;
         }
@@ -350,7 +350,7 @@ Type* Exp(Node* node)
     else if (strEqual(first->unitName, "MINUS"))// MINUS Exp         -a
     {
         Type* temp = Exp(second);
-        if (temp->kind != BASIC)
+        if (temp->kind != TYPE_BASIC)
         {
             printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
         }
@@ -366,7 +366,7 @@ Type* Exp(Node* node)
             Type* lhs = Exp(first);
             Node* third = second->sibling;
             Type* rhs = Exp(third);
-            if (lhs->kind != rhs->kind || lhs->kind == BASIC && lhs->t.basicType != rhs->t.basicType)
+            if (lhs->kind != rhs->kind || lhs->kind == TYPE_BASIC && lhs->t.basicType != rhs->t.basicType)
             {
                 printSemanticError(5, second->lineNum, "Type mismatched for assignment.", 0);
             }
@@ -374,7 +374,7 @@ Type* Exp(Node* node)
             {
                 printSemanticError(6, first->lineNum, "Assign to rvalue.", 0);
             }
-            else if (lhs->kind == STRUCTURE)
+            else if (lhs->kind == TYPE_STRUCTURE)
             {
                 if (!checkStructEqual(lhs->t.structure, rhs->t.structure))
                 {
@@ -395,13 +395,13 @@ Type* Exp(Node* node)
             Type* lhs = Exp(first);
             Node* third = second->sibling;
             Type* rhs = Exp(third);
-            if (lhs->kind != BASIC || rhs->kind != BASIC || lhs->t.basicType != rhs->t.basicType)
+            if (lhs->kind != TYPE_BASIC || rhs->kind != TYPE_BASIC || lhs->t.basicType != rhs->t.basicType)
             {
                 printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
             }
             else
             {
-                t->kind = BASIC;
+                t->kind = TYPE_BASIC;
                 t->t.basicType = lhs->t.basicType;
                 t->isRval = true;
             }
@@ -421,7 +421,7 @@ Type* Exp(Node* node)
             }
             else
             {
-                t->kind = BASIC;
+                t->kind = TYPE_BASIC;
                 t->t.basicType = INT;
                 t->isRval = true;
             }
@@ -430,7 +430,7 @@ Type* Exp(Node* node)
         {
             Type* lhs = Exp(first);
             char* fieldname = second->sibling->val.str;
-            if (lhs->kind != STRUCTURE)
+            if (lhs->kind != TYPE_STRUCTURE)
             {
                 printSemanticError(13, first->lineNum, "Illegal use of \".\"", 1, " Expecting a struct varible.");
             }
@@ -449,13 +449,13 @@ Type* Exp(Node* node)
         {
             Type* lhs = Exp(first);
             Type* rhs = Exp(second->sibling);
-            if (lhs->kind != BASIC || rhs->kind != BASIC || lhs->t.basicType != rhs->t.basicType)
+            if (lhs->kind != TYPE_BASIC || rhs->kind != TYPE_BASIC || lhs->t.basicType != rhs->t.basicType)
             {
                 printSemanticError(7, second->lineNum, "Type mismatched for operands.", 0);
             }
             else
             {
-                t->kind = BASIC;
+                t->kind = TYPE_BASIC;
                 t->t.basicType = INT;
                 t->isRval = true;
             }
@@ -464,12 +464,12 @@ Type* Exp(Node* node)
         {
             Node* third = second->sibling;
             Type* temp = Exp(first);
-            if (temp->kind == ARRAY)
+            if (temp->kind == TYPE_ARRAY)
             {
                 t->kind = temp->t.array.elem->kind;
                 t->t = temp->t.array.elem->t;
             }
-            else if (temp->kind != ARRAY)
+            else if (temp->kind != TYPE_ARRAY)
             {
                 printSemanticError(10, first->lineNum, "Expecting an array before \'[\'.", 0);
             }
@@ -485,10 +485,10 @@ Type* Exp(Node* node)
         */
         else if (strEqual(op, "LP"))
         {
-            Symbol* s = getTableSymbol(first->val.str, FUNCTION);
+            Symbol* s = getTableSymbol(first->val.str, TYPE_FUNCTION);
             if (s == NULL)
             {
-                s = getTableSymbol(first->val.str, CANNOT_DUP);
+                s = getTableSymbol(first->val.str, TYPE_CANNOT_DUP);
                 if (s != NULL)
                 {
                     printSemanticError(11, first->lineNum, first->val.str, 1, " is not a function.");
@@ -502,7 +502,7 @@ Type* Exp(Node* node)
             {
                 free(t);
                 t = s->type->t.function.returnType;
-                if (t->kind == BASIC)
+                if (t->kind == TYPE_BASIC)
                 {
                     t->isRval = true;
                 }
@@ -551,7 +551,7 @@ void Stmt(Node* node, Symbol* funcSym)
         {
             printSemanticError(8, first->lineNum, "Type mismatched for return.", 0);
         }
-        else if (retType->kind == BASIC && retType->t.basicType != funcRetType->t.basicType)
+        else if (retType->kind == TYPE_BASIC && retType->t.basicType != funcRetType->t.basicType)
         {
             printSemanticError(8, first->lineNum, "Type mismatched for return.", 0);
         }
@@ -560,7 +560,7 @@ void Stmt(Node* node, Symbol* funcSym)
     {
         Node* third = second->sibling;
         Type* t = Exp(third);
-        if (t->kind != BASIC || t->t.basicType != INT)
+        if (t->kind != TYPE_BASIC || t->t.basicType != INT)
         {
             printSemanticError(7, third->lineNum, "Type mismatched for operands,expecting INT.", 0);
         }
@@ -704,7 +704,7 @@ void FunDec(Node* node, Type* retType)
     Node* idnode = node->child;
     char* name = idnode->val.str;
     bool has = false;
-    if (has = searchTableItem(name, FUNCTION))
+    if (has = searchTableItem(name, TYPE_FUNCTION))
     {
         printSemanticError(4, node->lineNum, "Redefined function \"", 2, name, "\".");
     }
@@ -713,7 +713,7 @@ void FunDec(Node* node, Type* retType)
     {
         insertTableItem(s);
     }
-    s->type->kind = FUNCTION;
+    s->type->kind = TYPE_FUNCTION;
     s->type->t.function.returnType = retType;
     Node* thirdone = idnode->sibling->sibling;
     if (strEqual(thirdone->unitName, "RP"))
@@ -768,10 +768,10 @@ void ExtDefList(Node* subtree) // subtree unitName == "ExtDefList"
 void insertReadWrite()//预先插入read和write函数
 {
     Symbol* read = newSymbol("read"), * write = newSymbol("write");
-    write->type->kind = read->type->kind = FUNCTION;
+    write->type->kind = read->type->kind = TYPE_FUNCTION;
 
     Type* rret = newType(), * wret = newType();
-    rret->kind = BASIC;
+    rret->kind = TYPE_BASIC;
     rret->t.basicType = INT;
     memcpy(wret, rret, sizeof(Type));
 
@@ -784,7 +784,7 @@ void insertReadWrite()//预先插入read和write函数
     write->type->t.function.argc = 1;
     Parameter* p = newParameter();
     p->t = newType();
-    p->t->kind = BASIC;
+    p->t->kind = TYPE_BASIC;
     p->t->t.basicType = INT;
     write->type->t.function.params = p;
     insertTableItem(read);

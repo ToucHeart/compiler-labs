@@ -9,6 +9,7 @@
 #include<string.h>
 #include"syntaxTree.h"
 #include<stdarg.h>
+#include"symbolTable.h"
 
 #define DEBUG 1
 
@@ -92,9 +93,14 @@ void translateVarDec(Node* node, OperandPtr op)
     Node* first = node->child;
     if (strEqual(first->unitName, "ID"))
     {
-        if (op != NULL)
+        //根据类型进行判断
+        Symbol* sym = getTableSymbol(first->val.str, TYPE_CANNOT_DUP);
+        switch (sym->type->kind)
         {
-            op->u.name = mystrdup(first->val.str);
+            if (op != NULL)
+            {
+                op->u.name = mystrdup(first->val.str);
+            }
         }
     }
     else

@@ -5,12 +5,12 @@
 #define HASH_TABLE_SIZE 0x3fff
 typedef enum
 {
-    CANNOT_DUP,
-    BASIC,
-    ARRAY,
-    STRUCTURE,
-    FUNCTION,
-    OP_NONE,
+    TYPE_CANNOT_DUP,
+    TYPE_BASIC,
+    TYPE_ARRAY,
+    TYPE_STRUCTURE,
+    TYPE_FUNCTION,
+    TYPE_NONE,
 }Kind;
 
 typedef struct Type
