@@ -99,7 +99,7 @@ void translateVarDec(Node* node, OperandPtr op)
     }
     else
     {
-        translateVarDec(first->sibling, op);
+        translateVarDec(first, op);
     }
 }
 
@@ -142,6 +142,11 @@ void translateFunDec(Node* node)//函数名的标识符以及由一对圆括号�
     {
         translateVarList(third);
     }
+}
+
+void translateExp(Node* node, OperandPtr op)
+{
+
 }
 
 // Dec → VarDec | VarDec ASSIGNOP Exp
@@ -222,10 +227,10 @@ void translateCompSt(Node* node)
     }
 }
 
-void translateExtdef(Node* node)
+void translateExtDef(Node* node)
 {
     //不需要处理全局变量和结构体定义,没有全局变量,只需要翻译函数
-    assert(strEqual(node->unitName, "Extdef"));
+    assert(strEqual(node->unitName, "ExtDef"));
     Node* secondchild = node->child->sibling;
     if (strEqual(secondchild->unitName, "FunDec")) // function definition
     {
@@ -234,18 +239,18 @@ void translateExtdef(Node* node)
     }
 }
 
-void translateExtdefList(Node* node)
+void translateExtDefList(Node* node)
 {
-    assert(strEqual(node->unitName, "ExtdefList"));
+    assert(strEqual(node->unitName, "ExtDefList"));
     for (Node* q = node->child; q != NULL; q = q->sibling)
     {
         if (strEqual(q->unitName, "ExtDef"))
         {
-            translateExtdef(q);
+            translateExtDef(q);
         }
         else if (strEqual(q->unitName, "ExtDefList"))
         {
-            translateExtdefList(q);
+            translateExtDefList(q);
         }
     }
 }
@@ -255,7 +260,8 @@ void genInterCodes()
     initList(&list);
     if (root != NULL)
     {
-        translateExtdefList(root->child);
+        assert(strEqual(root->unitName, "Program"));
+        translateExtDefList(root->child);
     }
 }
 
