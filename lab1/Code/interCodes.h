@@ -10,7 +10,7 @@ typedef struct Operand
 {
     enum
     {
-        NONE,
+        OP_NONE,
         OP_VARIABLE,
         OP_CONSTANT,
         OP_ADDRESS,
@@ -36,6 +36,7 @@ typedef struct InterCode
         IR_MUL,
         IR_DIV,
         IR_FUNCTION,
+        IR_PARAM,
     } kind;
     union
     {

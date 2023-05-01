@@ -6,22 +6,15 @@
 #include "symbolTable.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
-
-char* mystrdup(const char* str)
-{
-    char* p = (char*)malloc(strlen(str) + 1);
-    strcpy(p, str);
-    return p;
-}
+#include"help.h"
 
 Type* newType()
 {
     Type* t = (Type*)malloc(sizeof(Type));
     memset(t, 0x0, sizeof(Type));
     t->isRval = false;
-    t->kind = NONE;
+    t->kind = OP_NONE;
     return t;
 }
 
@@ -36,9 +29,12 @@ Symbol* newSymbol(char* name)
     return sym;
 }
 
-bool strEqual(const char* str1, const char* str2)
+Parameter* newParameter()
 {
-    return strcmp(str1, str2) == 0;
+    Parameter* p = (Parameter*)malloc(sizeof(Parameter));
+    p->next = NULL;
+    p->t = NULL;
+    return p;
 }
 
 static unsigned int hash(char* name)

@@ -5,6 +5,8 @@
 #include"symbolTable.h"
 #include <stdarg.h>
 #include <stdlib.h>
+#include"help.h"
+#include<string.h>
 
 void printSemanticError(int errType, int lineNum, char* message, int num, ...)
 {
@@ -644,19 +646,16 @@ void DefList(Node* node, Symbol* structinfo)
 void CompSt(Node* node, Symbol* funcSym)
 {
     Node* secondone = node->child->sibling;
-    Node* thirdone = NULL;
+    Node* thirdone = secondone->sibling;
     if (strEqual(secondone->unitName, "DefList"))
     {
         DefList(secondone, NULL);
-        thirdone = secondone->sibling;
+        if (strEqual(thirdone->unitName, "StmtList"))
+            StmtList(thirdone, funcSym);
     }
     else if (strEqual(secondone->unitName, "StmtList"))
     {
-        thirdone = secondone;
-    }
-    if (thirdone != NULL && strEqual(thirdone->unitName, "StmtList"))
-    {
-        StmtList(thirdone, funcSym);
+        StmtList(secondone, funcSym);
     }
 }
 
@@ -728,13 +727,6 @@ void FunDec(Node* node, Type* retType)
     }
     CompSt(node->sibling, s);
 }
-Parameter* newParameter()
-{
-    Parameter* p = (Parameter*)malloc(sizeof(Parameter));
-    p->next = NULL;
-    p->t = NULL;
-    return p;
-}
 
 // 每个ExtDef表示一个全局变量、结构体或函数的定义
 // ExtDef → Specifier ExtDecList SEMI
@@ -772,9 +764,37 @@ void ExtDefList(Node* subtree) // subtree unitName == "ExtDefList"
         }
     }
 }
+
+void insertReadWrite()//预先插入read和write函数
+{
+    Symbol* read = newSymbol("read"), * write = newSymbol("write");
+    write->type->kind = read->type->kind = FUNCTION;
+
+    Type* rret = newType(), * wret = newType();
+    rret->kind = BASIC;
+    rret->t.basicType = INT;
+    memcpy(wret, rret, sizeof(Type));
+
+    read->type->t.function.returnType = rret;
+    write->type->t.function.returnType = wret;
+
+    read->type->t.function.argc = 0;
+    read->type->t.function.params = NULL;
+
+    write->type->t.function.argc = 1;
+    Parameter* p = newParameter();
+    p->t = newType();
+    p->t->kind = BASIC;
+    p->t->t.basicType = INT;
+    write->type->t.function.params = p;
+    insertTableItem(read);
+    insertTableItem(write);
+}
+
 extern Node* root;
 void semanticAnalyse()
 {
+    insertReadWrite();
     if (root != NULL)
         ExtDefList(root->child);
 }
