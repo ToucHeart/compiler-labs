@@ -52,7 +52,7 @@ static unsigned int hash(char* name)
 // global symbol table
 Symbol* SymbolTable[HASH_TABLE_SIZE + 1];
 
-bool searchTableItem(char* name, Kind k)
+bool hasTableItem(char* name, Kind k)
 {
     unsigned key = hash(name);
     if (SymbolTable[key] == NULL)
@@ -77,7 +77,7 @@ bool searchTableItem(char* name, Kind k)
     return false;
 }
 
-bool serarchStructItem(char* name, Symbol* structHead)
+bool hasStructItem(char* name, Symbol* structHead)
 {
     Symbol* head = structHead;
     while (head != NULL)

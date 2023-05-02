@@ -38,6 +38,9 @@ typedef struct InterCode
         IR_FUNCTION,
         IR_PARAM,
         IR_DEC,
+        IR_RETURN,
+        IR_LABEL,
+        IR_GOTO,
     } kind;
     union
     {
@@ -52,11 +55,11 @@ typedef struct InterCode
         }oneop;
         struct
         {
-            OperandPtr right, left;
+            OperandPtr  left, right;
         }assign;
         struct
         {
-            OperandPtr result, op1, op2;
+            OperandPtr result, left, right;
         }binop;
     } u;
 }InterCode;

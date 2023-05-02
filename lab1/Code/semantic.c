@@ -47,7 +47,7 @@ Symbol* StructSpecifier(Node* node)//只返回一个type的structure部分
     {
         Node* structid = second->child;
         bool has = false;
-        if (has = searchTableItem(structid->val.str, TYPE_CANNOT_DUP))
+        if (has = hasTableItem(structid->val.str, TYPE_CANNOT_DUP))
         {
             printSemanticError(16, structid->lineNum, "Duplicated name \"", 2, structid->val.str, "\".");
         }
@@ -114,7 +114,7 @@ Symbol* Array(Node* node, Type* t, Symbol* structinfo)
         char* name = node->val.str;
         if (structinfo == NULL)
         {
-            if (searchTableItem(name, TYPE_CANNOT_DUP))
+            if (hasTableItem(name, TYPE_CANNOT_DUP))
             {
                 printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
             }
@@ -128,7 +128,7 @@ Symbol* Array(Node* node, Type* t, Symbol* structinfo)
         }
         else
         {
-            if (serarchStructItem(name, structinfo->type->t.structure))
+            if (hasStructItem(name, structinfo->type->t.structure))
             {
                 printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\".");
             }
@@ -163,7 +163,7 @@ Symbol* VarDec(Node* n, Type* t, Symbol* structinfo)
         char* name = node->val.str;
         if (structinfo == NULL)
         {
-            if (searchTableItem(name, TYPE_CANNOT_DUP))
+            if (hasTableItem(name, TYPE_CANNOT_DUP))
             {
                 printSemanticError(3, node->lineNum, "Redefined variable \"", 2, name, "\".");
             }
@@ -177,7 +177,7 @@ Symbol* VarDec(Node* n, Type* t, Symbol* structinfo)
         }
         else
         {
-            if (serarchStructItem(name, structinfo->type->t.structure))
+            if (hasStructItem(name, structinfo->type->t.structure))
             {
                 printSemanticError(15, node->lineNum, "Redefined field \"", 2, node->val.str, "\".");
             }
@@ -434,7 +434,7 @@ Type* Exp(Node* node)
             {
                 printSemanticError(13, first->lineNum, "Illegal use of \".\"", 1, " Expecting a struct varible.");
             }
-            else if (!serarchStructItem(fieldname, lhs->t.structure))
+            else if (!hasStructItem(fieldname, lhs->t.structure))
             {
                 printSemanticError(14, second->sibling->lineNum, "Non-existent field \"", 2, fieldname, "\".");
             }
@@ -704,7 +704,7 @@ void FunDec(Node* node, Type* retType)
     Node* idnode = node->child;
     char* name = idnode->val.str;
     bool has = false;
-    if (has = searchTableItem(name, TYPE_FUNCTION))
+    if (has = hasTableItem(name, TYPE_FUNCTION))
     {
         printSemanticError(4, node->lineNum, "Redefined function \"", 2, name, "\".");
     }
