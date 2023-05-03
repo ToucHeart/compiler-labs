@@ -386,7 +386,7 @@ Exp →
 //
     | LP Exp RP
     | MINUS Exp
-
+//
     | ID LP Args RP
     | ID LP RP
 
@@ -583,7 +583,7 @@ void translateDec(Node* node)
         Node* third = second->sibling;
         OperandPtr left = newOperand(OP_VARIABLE, 0, NULL);
         translateVarDec(first, left, false);
-        OperandPtr right = newOperand(OP_NONE, 0, NULL);
+        OperandPtr right = newTemp();
         translateExp(third, right);
         InterCodePtr code = newInterCode(IR_ASSIGN, left, right);
         InterCodesPtr codes = newInterCodes(code);

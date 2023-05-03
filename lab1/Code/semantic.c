@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include"help.h"
 #include<string.h>
+extern bool hasError;
 
 void printSemanticError(int errType, int lineNum, char* message, int num, ...)
 {
@@ -20,6 +21,7 @@ void printSemanticError(int errType, int lineNum, char* message, int num, ...)
     }
     printf("\n");
     va_end(valist);
+    hasError = true;
 }
 
 /*
