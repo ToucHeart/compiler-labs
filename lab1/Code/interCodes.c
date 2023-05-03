@@ -434,11 +434,6 @@ void translateExp(Node* node, OperandPtr place)
         char* secondname = second->unitName;
         if (strEqual(first->unitName, "ID") && strEqual(second->unitName, "LP"))
         {
-            if (place == NULL)
-            {
-                place = newTemp();
-            }
-
             Symbol* funcname = getTableSymbol(first->val.str, TYPE_FUNCTION);
             assert(funcname != NULL);
 
@@ -511,7 +506,7 @@ void translateExp(Node* node, OperandPtr place)
         }
         else if (strEqual(firstname, "LP") && strEqual(secondname, "Exp"))
         {
-            translateExp(second, NULL);
+            translateExp(second, place);
         }
         else if (strEqual(secondname, "PLUS") || strEqual(secondname, "MINUS") || strEqual(secondname, "STAR") || strEqual(secondname, "DIV"))
         {
@@ -650,7 +645,8 @@ void translateStmt(Node* node)
     }
     else if (strEqual(first->unitName, "Exp"))
     {
-        translateExp(first, NULL);
+        OperandPtr temp = newTemp();
+        translateExp(first, temp);
     }
     else if (strEqual(first->unitName, "IF"))
     {
