@@ -41,6 +41,7 @@ typedef struct InterCode
         IR_RETURN,
         IR_LABEL,
         IR_GOTO,
+        IR_IF_GOTO,
     } kind;
     union
     {

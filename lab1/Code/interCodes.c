@@ -244,7 +244,29 @@ void translateFunDec(Node* node)//函数名的标识符以及由一对圆括号�
 
 void translate_Cond(Node* node, OperandPtr  label_true, OperandPtr label_false)
 {
-
+    assert(strEqual(node->unitName, "Exp"));
+    Node* first = node->child, * second = first->sibling;
+    if (second)
+    {
+        Node* third = second->sibling;
+        if (strEqual(second->unitName, "RELOP"))
+        {
+            /*
+            t1 = new_temp()
+            t2 = new_temp()
+            code1 = translate_Exp(Exp1, sym_table, t1)
+            code2 = translate_Exp(Exp2, sym_table, t2)
+            op = get_relop(RELOP);
+            code3 = [IF t1 op t2 GOTO label_true]
+            return code1 + code2 + code3 + [GOTO label_false]
+            */
+            OperandPtr t1 = newTemp(), t2 = newTemp();
+            translateExp(first, t1);
+            translateExp(third, t2);
+            
+            addInterCodes(newInterCodes(newInterCode(IR_GOTO, label_false)));
+        }
+    }
 }
 
 /*
