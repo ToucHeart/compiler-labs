@@ -50,6 +50,10 @@ typedef struct InterCode
         IR_WRITE,
         IR_CALL,
         IR_ARG,
+        IR_READ_ADDR,
+        IR_WRITE_ADDR,
+        IR_READ_WRITE_ADDR,
+        IR_GET_ADDR,
     } kind;
     union
     {

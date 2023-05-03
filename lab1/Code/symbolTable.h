@@ -74,4 +74,5 @@ void insertTableItem(Symbol* s);
 Symbol* getTableSymbol(char* name, Kind k);
 Symbol* getStructItem(char* name, Symbol* structHead);
 int getTypeSize(Type* t);
+int getStructEleOffset(Symbol* sym, char* idname);
 #endif

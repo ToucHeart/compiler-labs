@@ -183,3 +183,18 @@ int getTypeSize(Type* t)
     }
     return 0;
 }
+
+int getStructEleOffset(Symbol* sym, char* idname)
+{
+    int offset = 0;
+    Symbol* head = sym->type->t.structure;
+    while (head)
+    {
+        if (strEqual(head->name, idname))
+        {
+            return offset;
+        }
+        offset += getTypeSize(head->type);
+        head = head->next;
+    }
+}

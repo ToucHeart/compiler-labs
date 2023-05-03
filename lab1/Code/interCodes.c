@@ -107,6 +107,10 @@ InterCodePtr newInterCode(int kind, ...)
     break;
 
     case IR_ASSIGN:
+    case IR_READ_ADDR:
+    case IR_WRITE_ADDR:
+    case IR_READ_WRITE_ADDR:
+    case IR_GET_ADDR:
     p->u.assign.left = va_arg(ap, OperandPtr);
     p->u.assign.right = va_arg(ap, OperandPtr);
     break;
@@ -432,6 +436,10 @@ void translateExp(Node* node, OperandPtr place)
     else
     {
         char* secondname = second->unitName;
+        Node* third = second->sibling;
+        char* thirdname = NULL;
+        if (third)
+            thirdname = third->unitName;
         if (strEqual(first->unitName, "ID") && strEqual(second->unitName, "LP"))
         {
             Symbol* funcname = getTableSymbol(first->val.str, TYPE_FUNCTION);
@@ -443,8 +451,6 @@ void translateExp(Node* node, OperandPtr place)
             }
             else
             {
-                Node* third = second->sibling;
-                char* thirdname = third->unitName;
                 OperandPtr func = newOperand(OP_FUNCTION, 0, mystrdup(funcname->name));
                 if (strEqual(thirdname, "RP"))//no arguments
                 {
@@ -491,7 +497,20 @@ void translateExp(Node* node, OperandPtr place)
             translateExp(first, left);
             OperandPtr right = newTemp();
             translateExp(second->sibling, right);
-            InterCodePtr code = newInterCode(IR_ASSIGN, left, right);
+            int type = IR_ASSIGN;
+            if (left->kind == OP_ADDRESS && right->kind != OP_ADDRESS)
+            {
+                type = IR_WRITE_ADDR;
+            }
+            else if (left->kind != OP_ADDRESS && right->kind == OP_ADDRESS)
+            {
+                type = IR_READ_ADDR;
+            }
+            else if (left->kind == OP_ADDRESS && right->kind == OP_ADDRESS)
+            {
+                type = IR_READ_WRITE_ADDR;
+            }
+            InterCodePtr code = newInterCode(type, left, right);
             InterCodesPtr codes = newInterCodes(code);
             addInterCodes(codes);
         }
@@ -557,6 +576,29 @@ void translateExp(Node* node, OperandPtr place)
             addInterCodes(newInterCodes(newInterCode(IR_LABEL, label1)));
             addInterCodes(newInterCodes(newInterCode(IR_ASSIGN, place, one)));
             addInterCodes(newInterCodes(newInterCode(IR_LABEL, label2)));
+        }
+        else if (strEqual(secondname, "DOT"))//Exp DOT ID
+        {
+            OperandPtr temp = newTemp();
+            OperandPtr baseaddr = newOperand(OP_ADDRESS, 0, NULL);
+            translateExp(first, baseaddr);
+            addInterCodes(newInterCodes(newInterCode(IR_GET_ADDR, temp, baseaddr)));//得到基地址,把它赋给temp
+            Symbol* sym = getTableSymbol(baseaddr->u.name, TYPE_STRUCTURE);
+            int offset = getStructEleOffset(sym, third->val.str);//得到在结构体中的偏移量
+            OperandPtr off = newOperand(OP_CONSTANT, 0, 0);
+            setOpVal(off, offset);
+            setOpKind(place, OP_ADDRESS);
+            addInterCodes(newInterCodes(newInterCode(IR_ADD, place, temp, off)));
+        }
+        else if (strEqual(secondname, "LB"))// Exp LB Exp RB
+        {
+            OperandPtr base = newTemp();
+            translateExp(first, base);//得到基地址
+            setOpKind(base, OP_VARIABLE);
+            OperandPtr idx = newTemp();
+            translateExp(third, idx);//得到下标
+            // int size = getArrEleWidth(base->u.name);
+
         }
         else
         {
@@ -779,8 +821,6 @@ void printOp(FILE* output, OperandPtr op)
     fprintf(output, "#%d", op->u.value);
     break;
     case OP_ADDRESS:
-    fprintf(output, "&%s", op->u.name);
-    break;
     case OP_VARIABLE:
     case OP_LABEL:
     case OP_FUNCTION:
@@ -814,6 +854,32 @@ void printInterCode(FILE* output, InterCodePtr p)
         return;
     printOp(output, p->u.assign.left);
     fprintf(output, " := ");
+    printOp(output, p->u.assign.right);
+    break;
+
+    case IR_GET_ADDR:
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := &");
+    printOp(output, p->u.assign.right);
+    break;
+
+    case IR_READ_ADDR:
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := *");
+    printOp(output, p->u.assign.right);
+    break;
+
+    case IR_WRITE_ADDR:
+    fprintf(output, "*");
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := ");
+    printOp(output, p->u.assign.right);
+    break;
+
+    case IR_READ_WRITE_ADDR:
+    fprintf(output, "*");
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := *");
     printOp(output, p->u.assign.right);
     break;
 
