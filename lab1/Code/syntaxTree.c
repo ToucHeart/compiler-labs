@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include"help.h"
 
 Node* root = NULL;
 
@@ -16,9 +17,7 @@ Node* getSyntaxUnitNode(int num, char* name, NodeType t, int argc, ...)
 #endif
     Node* p = (Node*)malloc(sizeof(Node));
     p->lineNum = num;
-    char* buf = (char*)malloc((strlen(name) + 1) * sizeof(char));
-    memcpy(buf, name, strlen(name) + 1);
-    p->unitName = buf;
+    p->unitName = mystrdup(name);
     p->type = t;
     p->sibling = p->child = NULL;
     va_list arglist;
@@ -51,9 +50,7 @@ Node* getLexicalUnitNode(int num, char* name, NodeType t, char* val)
 #endif
     Node* p = (Node*)malloc(sizeof(Node));
     p->lineNum = num;
-    char* buf = (char*)malloc((strlen(name) + 1) * sizeof(char));
-    memcpy(buf, name, strlen(name) + 1);
-    p->unitName = buf;
+    p->unitName = mystrdup(name);
     p->type = t;
     p->sibling = p->child = NULL;
     switch (t)
@@ -67,13 +64,11 @@ Node* getLexicalUnitNode(int num, char* name, NodeType t, char* val)
     case TOKEN_TYPE_ID:
     case TOKEN_TYPE_TYPE:
     {
-        char* temp = (char*)malloc((strlen(val) + 1) * sizeof(char));
-        memcpy(temp, val, strlen(val) + 1);
-        p->val.str = temp;
+        p->val.str = mystrdup(val);
     }
     break;
     case TOKEN_TYPE_OTHER:
-    // do nothing
+    p->val.str = mystrdup(val);
     break;
     default:
     assert(0);

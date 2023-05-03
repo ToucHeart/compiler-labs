@@ -7,14 +7,11 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<string.h>
-#include"syntaxTree.h"
 #include<stdarg.h>
 #include"symbolTable.h"
 
 extern Node* root;
 static InterCodesList list;
-extern char* mystrdup(const char* str);
-void translateCompSt(Node* node);
 
 void setOpKind(OperandPtr op, int kind)
 {
@@ -97,7 +94,16 @@ InterCodePtr newInterCode(int kind, ...)
     p->u.binop.right = va_arg(ap, OperandPtr);
     break;
 
+    case IR_IF_GOTO:
+    p->u.ifgoto.left = va_arg(ap, OperandPtr);
+    p->u.ifgoto.op = va_arg(ap, OperandPtr);
+    p->u.ifgoto.right = va_arg(ap, OperandPtr);
+    p->u.ifgoto.result = va_arg(ap, OperandPtr);
+    break;
+
     case IR_GOTO:
+    p->u.oneop.op = va_arg(ap, OperandPtr);
+    break;
     case IR_LABEL:
     p->u.oneop.op = va_arg(ap, OperandPtr);
     break;
@@ -246,7 +252,12 @@ void translate_Cond(Node* node, OperandPtr  label_true, OperandPtr label_false)
 {
     assert(strEqual(node->unitName, "Exp"));
     Node* first = node->child, * second = first->sibling;
-    if (second)
+    if (strEqual(first->unitName, "NOT"))
+    {
+        translate_Cond(second, label_false, label_true);
+        return;
+    }
+    else if (second != NULL)
     {
         Node* third = second->sibling;
         if (strEqual(second->unitName, "RELOP"))
@@ -263,10 +274,40 @@ void translate_Cond(Node* node, OperandPtr  label_true, OperandPtr label_false)
             OperandPtr t1 = newTemp(), t2 = newTemp();
             translateExp(first, t1);
             translateExp(third, t2);
-            
+            OperandPtr op = newOperand(OP_RELOP, 0, mystrdup(second->val.str));
+            addInterCodes(newInterCodes(newInterCode(IR_IF_GOTO, t1, op, t2, label_true)));
             addInterCodes(newInterCodes(newInterCode(IR_GOTO, label_false)));
+            return;
+        }
+        else if (strEqual(second->unitName, "AND"))
+        {
+            OperandPtr label1 = newLabel();
+            translate_Cond(first, label1, label_false);
+            addInterCodes(newInterCodes(newInterCode(IR_LABEL, label1)));
+            translate_Cond(third, label_true, label_false);
+            return;
+        }
+        else if (strEqual(second->unitName, "OR"))
+        {
+            OperandPtr label1 = newLabel();
+            translate_Cond(first, label_true, label1);
+            addInterCodes(newInterCodes(newInterCode(IR_LABEL, label1)));
+            translate_Cond(third, label_true, label_false);
+            return;
         }
     }
+    /*
+    t1 = new_temp()
+    code1 = translate_Exp(Exp, sym_table, t1)
+    code2 = [IF t1 != #0 GOTO label_true]
+    return code1 + code2 + [GOTO label_false]
+    */
+    OperandPtr t1 = newTemp();
+    OperandPtr op = newOperand(OP_RELOP, 0, mystrdup("!="));
+    OperandPtr zero = newOperand(OP_CONSTANT, 0, NULL);
+    translateExp(node, t1);
+    addInterCodes(newInterCodes(newInterCode(IR_IF_GOTO, t1, op, zero, label_true)));
+    addInterCodes(newInterCodes(newInterCode(IR_GOTO, label_false)));
 }
 
 /*
@@ -705,8 +746,20 @@ void printInterCode(FILE* output, InterCodePtr p)
     case IR_LABEL:
     fprintf(output, "LABEL ");
     printOp(output, p->u.oneop.op);
+    fprintf(output, " :");
     break;
 
+    case IR_IF_GOTO:
+    fprintf(output, "IF ");
+    printOp(output, p->u.ifgoto.left);
+    fprintf(output, " ");
+    printOp(output, p->u.ifgoto.op);
+    fprintf(output, " ");
+    printOp(output, p->u.ifgoto.right);
+    fprintf(output, " ");
+    fprintf(output, "GOTO ");
+    printOp(output, p->u.ifgoto.result);
+    break;
     default:
     fprintf(stderr, RED"code type is %d\n"NORMAL, p->kind);
     assert(0);

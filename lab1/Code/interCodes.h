@@ -5,6 +5,7 @@ typedef struct Operand* OperandPtr;
 typedef struct InterCode* InterCodePtr;
 typedef struct InterCodes* InterCodesPtr;
 typedef struct InterCodesList* InterCodesListPtr;
+#include"syntaxTree.h"
 
 typedef struct Operand
 {
@@ -62,6 +63,10 @@ typedef struct InterCode
         {
             OperandPtr result, left, right;
         }binop;
+        struct
+        {
+            OperandPtr left, op, right, result;
+        }ifgoto;
     } u;
 }InterCode;
 
@@ -78,5 +83,6 @@ typedef struct InterCodesList//双向循环链表
     int tmpIndex;
     int labelIndex;
 }InterCodesList;
-
+void translateExp(Node* node, OperandPtr place);
+void translateCompSt(Node* node);
 #endif
