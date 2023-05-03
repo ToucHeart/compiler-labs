@@ -61,6 +61,34 @@ OperandPtr newTemp()
     return temp;
 }
 
+ArgListPtr newArgList()
+{
+    ArgListPtr arglist = (ArgListPtr)malloc(sizeof(ArgList));
+    arglist->head = NULL;
+    return arglist;
+}
+
+ArgNodePtr newArgNode(OperandPtr op)
+{
+    ArgNodePtr argnode = (ArgNodePtr)malloc(sizeof(ArgNode));
+    argnode->arg = op;
+    argnode->next = NULL;
+    return argnode;
+}
+
+void addArgNode(ArgNodePtr arg, ArgListPtr arglist)
+{
+    if (arglist->head == NULL)
+    {
+        arglist->head = arg;
+    }
+    else
+    {
+        arg->next = arglist->head;
+        arglist->head = arg;
+    }
+}
+
 InterCodePtr newInterCode(int kind, ...)
 {
     InterCodePtr p = (InterCodePtr)malloc(sizeof(InterCode));
@@ -72,6 +100,9 @@ InterCodePtr newInterCode(int kind, ...)
     case IR_FUNCTION:
     case IR_PARAM:
     case IR_RETURN:
+    case IR_READ:
+    case IR_WRITE:
+    case IR_ARG:
     p->u.oneop.op = va_arg(ap, OperandPtr);
     break;
 
@@ -106,6 +137,11 @@ InterCodePtr newInterCode(int kind, ...)
     break;
     case IR_LABEL:
     p->u.oneop.op = va_arg(ap, OperandPtr);
+    break;
+
+    case IR_CALL:
+    p->u.assign.left = va_arg(ap, OperandPtr);
+    p->u.assign.right = va_arg(ap, OperandPtr);
     break;
 
     default:
@@ -310,19 +346,44 @@ void translate_Cond(Node* node, OperandPtr  label_true, OperandPtr label_false)
     addInterCodes(newInterCodes(newInterCode(IR_GOTO, label_false)));
 }
 
-/*
-Exp → Exp ASSIGNOP Exp  ok
+// Args → Exp COMMA Args | Exp
+void translateArgs(Node* node, ArgListPtr args)
+{
+    /*
+    t1 = new_temp()
+    code1 = translate_Exp(Exp, sym_table, t1)
+    arg_list = t1 + arg_list
+    return code1
+    */
+    Node* first = node->child;
 
+    OperandPtr t1 = newTemp();
+    translateExp(first, t1);
+    addArgNode(newArgNode(t1), args);
+    while (first->sibling != NULL)
+    {
+        first = first->sibling->sibling->child;
+        OperandPtr temp = newTemp();
+        translateExp(first, temp);
+        addArgNode(newArgNode(temp), args);
+    }
+}
+
+/*
+Exp →
+//
+    Exp ASSIGNOP Exp  ok
+//
     | NOT Exp
     | Exp AND Exp
     | Exp OR Exp
     | Exp RELOP Exp
-
+//
     | Exp PLUS Exp
     | Exp MINUS Exp
     | Exp STAR Exp
     | Exp DIV Exp
-
+//
     | LP Exp RP
     | MINUS Exp
 
@@ -331,7 +392,7 @@ Exp → Exp ASSIGNOP Exp  ok
 
     | Exp LB Exp RB
     | Exp DOT ID
-
+//
     | ID
     | INT
     | FLOAT
@@ -371,7 +432,65 @@ void translateExp(Node* node, OperandPtr place)
     else
     {
         char* secondname = second->unitName;
-        if (strEqual(secondname, "ASSIGNOP"))
+        if (strEqual(first->unitName, "ID") && strEqual(second->unitName, "LP"))
+        {
+            if (place == NULL)
+            {
+                place = newTemp();
+            }
+
+            Symbol* funcname = getTableSymbol(first->val.str, TYPE_FUNCTION);
+            assert(funcname != NULL);
+
+            if (strEqual(funcname->name, "read"))
+            {
+                addInterCodes(newInterCodes(newInterCode(IR_READ, place)));
+            }
+            else
+            {
+                Node* third = second->sibling;
+                char* thirdname = third->unitName;
+                OperandPtr func = newOperand(OP_FUNCTION, 0, mystrdup(funcname->name));
+                if (strEqual(thirdname, "RP"))//no arguments
+                {
+                    addInterCodes(newInterCodes(newInterCode(IR_CALL, place, func)));
+                }
+                else if (strEqual(thirdname, "Args"))
+                {
+                    /*
+                    code1 = translate_Args(Args, sym_table, arg_list)
+                    if (function.name == “write”)
+                    return code1 + [WRITE arg_list[1]] + [place := #0]
+                    for i = 1 to length(arg_list)
+                        code2 = code2 + [ARG arg_list[i]]
+                    return code1 + code2 + [place := CALL function.name]
+                    */
+                    ArgListPtr arg_list = newArgList();
+                    translateArgs(third, arg_list);
+                    if (strEqual(funcname->name, "write"))
+                    {
+                        addInterCodes(newInterCodes(newInterCode(IR_WRITE, arg_list->head->arg)));
+                        OperandPtr zero = newOperand(OP_CONSTANT, 0, NULL);
+                        addInterCodes(newInterCodes(newInterCode(IR_ASSIGN, place, zero)));
+                    }
+                    else
+                    {
+                        ArgNodePtr h = arg_list->head;
+                        while (h != NULL)
+                        {
+                            addInterCodes(newInterCodes(newInterCode(IR_ARG, h->arg)));
+                            h = h->next;
+                        }
+                        addInterCodes(newInterCodes(newInterCode(IR_CALL, place, func)));
+                    }
+                }
+                else
+                {
+                    assert(0);
+                }
+            }
+        }
+        else if (strEqual(secondname, "ASSIGNOP"))
         {
             OperandPtr left = newTemp();
             translateExp(first, left);
@@ -759,6 +878,26 @@ void printInterCode(FILE* output, InterCodePtr p)
     fprintf(output, " ");
     fprintf(output, "GOTO ");
     printOp(output, p->u.ifgoto.result);
+    break;
+
+    case IR_READ:
+    fprintf(output, "READ ");
+    printOp(output, p->u.oneop.op);
+    break;
+
+    case IR_WRITE:
+    fprintf(output, "WRITE ");
+    printOp(output, p->u.oneop.op);
+    break;
+    case IR_CALL:
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := CALL ");
+    printOp(output, p->u.assign.right);
+    break;
+
+    case IR_ARG:
+    fprintf(output, "ARG ");
+    printOp(output, p->u.oneop.op);
     break;
     default:
     fprintf(stderr, RED"code type is %d\n"NORMAL, p->kind);

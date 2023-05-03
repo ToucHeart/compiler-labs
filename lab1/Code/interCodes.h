@@ -5,6 +5,9 @@ typedef struct Operand* OperandPtr;
 typedef struct InterCode* InterCodePtr;
 typedef struct InterCodes* InterCodesPtr;
 typedef struct InterCodesList* InterCodesListPtr;
+typedef struct ArgNode* ArgNodePtr;
+typedef struct ArgList* ArgListPtr;
+
 #include"syntaxTree.h"
 
 typedef struct Operand
@@ -43,6 +46,10 @@ typedef struct InterCode
         IR_LABEL,
         IR_GOTO,
         IR_IF_GOTO,
+        IR_READ,
+        IR_WRITE,
+        IR_CALL,
+        IR_ARG,
     } kind;
     union
     {
@@ -83,6 +90,18 @@ typedef struct InterCodesList//双向循环链表
     int tmpIndex;
     int labelIndex;
 }InterCodesList;
+
+typedef struct ArgNode
+{
+    OperandPtr arg;
+    ArgNodePtr next;
+}ArgNode;
+
+typedef struct ArgList
+{
+    ArgNodePtr head;
+}ArgList;
+
 void translateExp(Node* node, OperandPtr place);
 void translateCompSt(Node* node);
 #endif
