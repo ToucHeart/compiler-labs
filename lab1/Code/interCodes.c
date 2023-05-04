@@ -20,7 +20,7 @@ void setOpKind(OperandPtr op, int kind)
     op->kind = kind;
 }
 
-void set2Arg(OperandPtr op)
+void set2Arg(OperandPtr op, bool isarg)
 {
     if (op == NULL)
         return;
@@ -423,7 +423,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
             {
                 setOpKind(place, OP_STRUCT_ARR_ID);
                 setOpName(place, mystrdup(first->val.str));
-                place->isArg = sym->isArg;
+                set2Arg(place, sym->isArg);
             }
             else
             {
