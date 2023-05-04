@@ -187,7 +187,8 @@ int getTypeSize(Type* t)
 
 int getStructEleOffset(Symbol* sym, char* idname, Symbol** target)
 {
-    int offset = 0;    Symbol* head;
+    int offset = 0;
+    Symbol* head;
     if (sym->type->kind == TYPE_STRUCTURE)
         head = sym->type->t.structure;
     else
