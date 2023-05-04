@@ -401,7 +401,7 @@ Exp →
     | INT
     | FLOAT
 */
-void translateExp(Node* node, OperandPtr place)
+Symbol* translateExp(Node* node, OperandPtr place)
 {
     assert(strEqual(node->unitName, "Exp"));
     Node* first = node->child, * second = first->sibling;
@@ -413,7 +413,7 @@ void translateExp(Node* node, OperandPtr place)
             Symbol* sym = getTableSymbol(first->val.str, TYPE_CANNOT_DUP);
             if (sym->type->kind == TYPE_STRUCTURE || sym->type->kind == TYPE_ARRAY)
             {
-                setOpKind(place, OP_ADDRESS);
+                setOpKind(place, OP_STRUCT_ARR_ID);
                 setOpName(place, mystrdup(first->val.str));
             }
             else
@@ -421,6 +421,7 @@ void translateExp(Node* node, OperandPtr place)
                 setOpKind(place, OP_VARIABLE);
                 setOpName(place, mystrdup(first->val.str));
             }
+            return sym;
         }
         else if (strEqual(firstname, "INT"))
         {
@@ -579,25 +580,51 @@ void translateExp(Node* node, OperandPtr place)
         }
         else if (strEqual(secondname, "DOT"))//Exp DOT ID
         {
-            OperandPtr temp = newTemp();
-            OperandPtr baseaddr = newOperand(OP_ADDRESS, 0, NULL);
-            translateExp(first, baseaddr);
-            addInterCodes(newInterCodes(newInterCode(IR_GET_ADDR, temp, baseaddr)));//得到基地址,把它赋给temp
-            Symbol* sym = getTableSymbol(baseaddr->u.name, TYPE_STRUCTURE);
-            int offset = getStructEleOffset(sym, third->val.str);//得到在结构体中的偏移量
+            OperandPtr base = newTemp(), baseaddr;
+            Symbol* location = translateExp(first, base);
+            if (base->kind != OP_ADDRESS)
+            {
+                baseaddr = newTemp();
+                addInterCodes(newInterCodes(newInterCode(IR_GET_ADDR, baseaddr, base)));//得到基地址,把它赋给temp   
+            }
+            else
+            {
+                baseaddr = base;
+            }
+
+            Symbol* target;
+            int offset = getStructEleOffset(location, third->val.str, &target);//得到在结构体中的偏移量
             OperandPtr off = newOperand(OP_CONSTANT, 0, 0);
             setOpVal(off, offset);
             setOpKind(place, OP_ADDRESS);
-            addInterCodes(newInterCodes(newInterCode(IR_ADD, place, temp, off)));
+            addInterCodes(newInterCodes(newInterCode(IR_ADD, place, baseaddr, off)));
+            return target;
         }
-        else if (strEqual(secondname, "LB"))// Exp LB Exp RB
+        else if (strEqual(secondname, "LB"))// Exp LB Exp RB,数组元素,仅支持一维数组
         {
-            OperandPtr base = newTemp();
-            translateExp(first, base);//得到基地址
-            setOpKind(base, OP_VARIABLE);
+            OperandPtr base = newTemp(), baseaddr;
+            Symbol* location = translateExp(first, base);//得到基地址
+            if (base->kind != OP_ADDRESS)
+            {
+                baseaddr = newTemp();
+                addInterCodes(newInterCodes(newInterCode(IR_GET_ADDR, baseaddr, base)));//得到基地址,把它赋给temp
+            }
+            else
+            {
+                baseaddr = base;
+            }
+
             OperandPtr idx = newTemp();
             translateExp(third, idx);//得到下标
-            // int size = getArrEleWidth(base->u.name);
+
+            OperandPtr width = newOperand(OP_CONSTANT, 0, 0);
+            setOpVal(width, getArrEleWidth(location));//得到数组元素宽度
+
+            OperandPtr offset = newTemp();
+            addInterCodes(newInterCodes(newInterCode(IR_MUL, offset, idx, width)));
+
+            setOpKind(place, OP_ADDRESS);
+            addInterCodes(newInterCodes(newInterCode(IR_ADD, place, baseaddr, offset)));
 
         }
         else
@@ -605,6 +632,7 @@ void translateExp(Node* node, OperandPtr place)
             assert(0);
         }
     }
+    return NULL;
 }
 
 // Dec → VarDec | VarDec ASSIGNOP Exp
@@ -820,6 +848,7 @@ void printOp(FILE* output, OperandPtr op)
     case OP_CONSTANT:
     fprintf(output, "#%d", op->u.value);
     break;
+    case OP_STRUCT_ARR_ID:
     case OP_ADDRESS:
     case OP_VARIABLE:
     case OP_LABEL:
@@ -891,6 +920,10 @@ void printInterCode(FILE* output, InterCodePtr p)
         return;
     printOp(output, p->u.binop.result);
     fprintf(output, " := ");
+    if (p->u.binop.left->kind == OP_ADDRESS)
+    {
+        fprintf(output, "*");
+    }
     printOp(output, p->u.binop.left);
     {
         switch (p->kind)
@@ -910,6 +943,10 @@ void printInterCode(FILE* output, InterCodePtr p)
         default:
         break;
         }
+    }
+    if (p->u.binop.right->kind == OP_ADDRESS)
+    {
+        fprintf(output, "*");
     }
     printOp(output, p->u.binop.right);
     break;
@@ -959,6 +996,8 @@ void printInterCode(FILE* output, InterCodePtr p)
 
     case IR_ARG:
     fprintf(output, "ARG ");
+    if (p->u.oneop.op->kind == OP_STRUCT_ARR_ID)
+        fprintf(output, "&");
     printOp(output, p->u.oneop.op);
     break;
     default:

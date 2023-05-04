@@ -9,6 +9,7 @@ typedef struct ArgNode* ArgNodePtr;
 typedef struct ArgList* ArgListPtr;
 
 #include"syntaxTree.h"
+#include"symbolTable.h"
 
 typedef struct Operand
 {
@@ -21,6 +22,7 @@ typedef struct Operand
         OP_FUNCTION,
         OP_LABEL,
         OP_RELOP,
+        OP_STRUCT_ARR_ID,
     }kind;
     union
     {
@@ -106,6 +108,6 @@ typedef struct ArgList
     ArgNodePtr head;
 }ArgList;
 
-void translateExp(Node* node, OperandPtr place);
+Symbol* translateExp(Node* node, OperandPtr place);
 void translateCompSt(Node* node);
 #endif
