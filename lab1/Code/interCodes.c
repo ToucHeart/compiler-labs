@@ -616,7 +616,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
             if (location == NULL)
             {
                 printf(RED"Cannot translate : Code contains variables of multi - dimensional array type "
-                    "or parameters of array type."NORMAL);
+                    "or parameters of array type.\n"NORMAL);
                 exit(0);
             }
             if (base->kind != OP_ADDRESS)
