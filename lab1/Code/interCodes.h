@@ -30,6 +30,7 @@ typedef struct Operand
         char* name;
     } u;
     bool isArg;
+    bool isBasicAddr;
 }Operand;
 
 typedef struct InterCode

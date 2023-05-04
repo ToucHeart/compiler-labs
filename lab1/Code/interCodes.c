@@ -50,6 +50,7 @@ OperandPtr newOperand(int kind, int val, char* name)
     op->u.value = val;
     op->u.name = name;
     op->isArg = false;
+    op->isBasicAddr = false;
     return op;
 }
 
@@ -605,6 +606,10 @@ Symbol* translateExp(Node* node, OperandPtr place)
             Symbol* target;
             int offset = getStructEleOffset(location, third->val.str, &target);//得到在结构体中的偏移量
             OperandPtr off = newOperand(OP_CONSTANT, offset, int2cptr(offset));
+            if (target->type->kind == TYPE_BASIC)
+            {
+                place->isBasicAddr = true;
+            }
             setOpKind(place, OP_ADDRESS);
             addInterCodes(newInterCodes(newInterCode(IR_ADD, place, baseaddr, off)));
             return target;
@@ -646,6 +651,9 @@ Symbol* translateExp(Node* node, OperandPtr place)
             {
             case TYPE_STRUCTURE:
             return t->t.structure;
+            break;
+            case TYPE_BASIC:
+            place->isBasicAddr = true;
             break;
             default:;
                 break;
@@ -1038,7 +1046,7 @@ void printInterCode(FILE* output, InterCodePtr p)
     fprintf(output, "ARG ");
     if (p->u.oneop.op->kind == OP_STRUCT_ARR_ID)
         fprintf(output, "&");
-    else if (p->u.oneop.op->kind == OP_ADDRESS)
+    else if (p->u.oneop.op->kind == OP_ADDRESS && p->u.oneop.op->isBasicAddr)
         fprintf(output, "*");
     printOp(output, p->u.oneop.op);
     break;
