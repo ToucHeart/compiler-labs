@@ -94,7 +94,6 @@ typedef struct InterCodes
 typedef struct InterCodesList//双向循环链表
 {
     InterCodesPtr dummyHead;
-    int varIndex;
     int tmpIndex;
     int labelIndex;
 }InterCodesList;

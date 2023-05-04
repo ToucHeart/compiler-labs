@@ -179,7 +179,6 @@ void initList()
     list.dummyHead->prev = list.dummyHead;
     list.labelIndex = 1;
     list.tmpIndex = 1;
-    list.varIndex = 1;
 }
 
 void addInterCodes(InterCodesPtr p)
