@@ -613,6 +613,12 @@ Symbol* translateExp(Node* node, OperandPtr place)
         {
             OperandPtr base = newTemp(), baseaddr;
             Symbol* location = translateExp(first, base);//得到基地址
+            if (location == NULL)
+            {
+                printf(RED"Cannot translate : Code contains variables of multi - dimensional array type "
+                    "or parameters of array type."NORMAL);
+                exit(0);
+            }
             if (base->kind != OP_ADDRESS)
             {
                 baseaddr = newTemp();
