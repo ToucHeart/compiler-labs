@@ -29,6 +29,7 @@ typedef struct Operand
         int value;
         char* name;
     } u;
+    bool isArg;
 }Operand;
 
 typedef struct InterCode

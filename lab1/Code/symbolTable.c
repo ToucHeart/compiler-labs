@@ -24,6 +24,7 @@ Symbol* newSymbol(char* name)
     if (name != NULL)
         sym->name = mystrdup(name);
     sym->type = newType();
+    sym->isArg = false;
     sym->next = NULL;
     memset(sym->type, 0, sizeof(Type));
     return sym;

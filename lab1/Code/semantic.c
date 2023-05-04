@@ -666,6 +666,7 @@ void ParamDec(Node* node, Symbol* s)
 {
     Type* temp = Specifier(node->child);
     Symbol* paraSymbol = VarDec(node->child->sibling, temp, NULL);
+    paraSymbol->isArg = true;
     if (paraSymbol == NULL)
         return;
     if (s->type->t.function.params == NULL)

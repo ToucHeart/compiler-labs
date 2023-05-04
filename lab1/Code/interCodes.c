@@ -20,6 +20,13 @@ void setOpKind(OperandPtr op, int kind)
     op->kind = kind;
 }
 
+void set2Arg(OperandPtr op)
+{
+    if (op == NULL)
+        return;
+    op->isArg = true;
+}
+
 void setOpVal(OperandPtr op, int value)
 {
     if (op == NULL)
@@ -42,6 +49,7 @@ OperandPtr newOperand(int kind, int val, char* name)
     op->kind = kind;
     op->u.value = val;
     op->u.name = name;
+    op->isArg = false;
     return op;
 }
 
@@ -415,6 +423,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
             {
                 setOpKind(place, OP_STRUCT_ARR_ID);
                 setOpName(place, mystrdup(first->val.str));
+                set2Arg(place);
             }
             else
             {
@@ -585,17 +594,17 @@ Symbol* translateExp(Node* node, OperandPtr place)
             if (base->kind != OP_ADDRESS)
             {
                 baseaddr = newTemp();
-                addInterCodes(newInterCodes(newInterCode(IR_GET_ADDR, baseaddr, base)));//得到基地址,把它赋给temp   
+                addInterCodes(newInterCodes(newInterCode(IR_GET_ADDR, baseaddr, base)));//得到基地址,把它赋给baseaddr
             }
             else
             {
                 baseaddr = base;
+                setOpKind(baseaddr, OP_VARIABLE);
             }
 
             Symbol* target;
             int offset = getStructEleOffset(location, third->val.str, &target);//得到在结构体中的偏移量
-            OperandPtr off = newOperand(OP_CONSTANT, 0, 0);
-            setOpVal(off, offset);
+            OperandPtr off = newOperand(OP_CONSTANT, offset, int2cptr(offset));
             setOpKind(place, OP_ADDRESS);
             addInterCodes(newInterCodes(newInterCode(IR_ADD, place, baseaddr, off)));
             return target;
@@ -612,6 +621,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
             else
             {
                 baseaddr = base;
+                setOpKind(baseaddr, OP_VARIABLE);//place是最终的地址,baseaddr当做普通变量
             }
 
             OperandPtr idx = newTemp();
@@ -625,7 +635,15 @@ Symbol* translateExp(Node* node, OperandPtr place)
 
             setOpKind(place, OP_ADDRESS);
             addInterCodes(newInterCodes(newInterCode(IR_ADD, place, baseaddr, offset)));
-
+            Type* t = location->type->t.array.elem;
+            switch (t->kind)
+            {
+            case TYPE_STRUCTURE:
+            return t->t.structure;
+            break;
+            default:;
+                break;
+            }
         }
         else
         {
@@ -888,7 +906,9 @@ void printInterCode(FILE* output, InterCodePtr p)
 
     case IR_GET_ADDR:
     printOp(output, p->u.assign.left);
-    fprintf(output, " := &");
+    fprintf(output, " := ");
+    if (p->u.assign.right->isArg == false)
+        fprintf(output, "&");
     printOp(output, p->u.assign.right);
     break;
 

@@ -47,6 +47,7 @@ typedef struct Symbol
 {
     char* name;
     Type* type;
+    bool isArg;
     struct Symbol* next; // same hash code next symbol, linked from hash table
 } Symbol;
 
