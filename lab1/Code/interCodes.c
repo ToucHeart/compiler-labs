@@ -423,7 +423,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
             {
                 setOpKind(place, OP_STRUCT_ARR_ID);
                 setOpName(place, mystrdup(first->val.str));
-                set2Arg(place);
+                place->isArg = sym->isArg;
             }
             else
             {
@@ -904,7 +904,7 @@ void printInterCode(FILE* output, InterCodePtr p)
     printOp(output, p->u.assign.right);
     break;
 
-    case IR_GET_ADDR:
+    case IR_GET_ADDR://将地址赋给临时变量
     printOp(output, p->u.assign.left);
     fprintf(output, " := ");
     if (p->u.assign.right->isArg == false)
@@ -973,6 +973,8 @@ void printInterCode(FILE* output, InterCodePtr p)
 
     case IR_RETURN:
     fprintf(output, "RETURN ");
+    if (p->u.oneop.op->kind == OP_ADDRESS)
+        fprintf(output, "*");
     printOp(output, p->u.oneop.op);
     break;
 
@@ -1006,9 +1008,13 @@ void printInterCode(FILE* output, InterCodePtr p)
 
     case IR_WRITE:
     fprintf(output, "WRITE ");
+    if (p->u.oneop.op->kind == OP_ADDRESS)
+        fprintf(output, "*");
     printOp(output, p->u.oneop.op);
     break;
     case IR_CALL:
+    if (p->u.assign.left->kind == OP_ADDRESS)
+        fprintf(output, "*");
     printOp(output, p->u.assign.left);
     fprintf(output, " := CALL ");
     printOp(output, p->u.assign.right);
@@ -1018,6 +1024,8 @@ void printInterCode(FILE* output, InterCodePtr p)
     fprintf(output, "ARG ");
     if (p->u.oneop.op->kind == OP_STRUCT_ARR_ID)
         fprintf(output, "&");
+    else if (p->u.oneop.op->kind == OP_ADDRESS)
+        fprintf(output, "*");
     printOp(output, p->u.oneop.op);
     break;
     default:
