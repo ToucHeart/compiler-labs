@@ -997,10 +997,18 @@ void printInterCode(FILE* output, InterCodePtr p)
 
     case IR_IF_GOTO:
     fprintf(output, "IF ");
+    if (p->u.ifgoto.left->kind == OP_ADDRESS)
+    {
+        fprintf(output, "*");
+    }
     printOp(output, p->u.ifgoto.left);
     fprintf(output, " ");
     printOp(output, p->u.ifgoto.op);
     fprintf(output, " ");
+    if (p->u.ifgoto.right->kind == OP_ADDRESS)
+    {
+        fprintf(output, "*");
+    }
     printOp(output, p->u.ifgoto.right);
     fprintf(output, " ");
     fprintf(output, "GOTO ");
