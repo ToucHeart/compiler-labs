@@ -223,6 +223,9 @@ void translateVarDec(Node* node, OperandPtr op, bool isParam)
             if (isParam)//是形参,op!=NULL
             {
                 setOpName(op, mystrdup(first->val.str));
+                printf(RED"Cannot translate: Code contains variables of multi-dimensional array type or "
+                    " parameters of array type.\n"NORMAL);
+                exit(0);
             }
             else//是变量定义,op==NULL
             {
@@ -620,7 +623,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
             Symbol* location = translateExp(first, base);//得到基地址
             if (location == NULL)
             {
-                printf(RED"Cannot translate : Code contains variables of multi - dimensional array type "
+                printf(RED"Cannot translate: Code contains variables of multi - dimensional array type "
                     "or parameters of array type.\n"NORMAL);
                 exit(0);
             }
