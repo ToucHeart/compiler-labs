@@ -24,7 +24,7 @@ void set2Arg(OperandPtr op, bool isarg)
 {
     if (op == NULL)
         return;
-    op->isArg = true;
+    op->isArg = isarg;
 }
 
 void setOpVal(OperandPtr op, int value)
