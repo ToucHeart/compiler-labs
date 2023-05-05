@@ -539,8 +539,8 @@ Symbol* translateExp(Node* node, OperandPtr place)
                 int num = min(lhs->type->t.array.size, rhs->type->t.array.size);
 
                 OperandPtr leftCur = newTemp(), rightCur = newTemp();
-                int type = IR_GET_ADDR;
-                if (left->kind == OP_ADDRESS)
+                int type = IR_GET_ADDR;//直接数组赋值需要取一次地址
+                if (left->kind == OP_ADDRESS)//结构体内部的数组赋值
                     type = IR_ASSIGN;
                 addInterCodes(newInterCodes(newInterCode(type, leftCur, left)));
                 addInterCodes(newInterCodes(newInterCode(type, rightCur, right)));//取地址
