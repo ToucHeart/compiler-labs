@@ -348,6 +348,8 @@ void translate_Cond(Node* node, OperandPtr  label_true, OperandPtr label_false)
         }
     }
     /*
+    other cases:
+
     t1 = new_temp()
     code1 = translate_Exp(Exp, sym_table, t1)
     code2 = [IF t1 != #0 GOTO label_true]

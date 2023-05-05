@@ -383,6 +383,13 @@ Type* Exp(Node* node)
                     printSemanticError(5, second->lineNum, "Type mismatched for assignment.", 0);
                 }
             }
+            else if (lhs->kind == TYPE_ARRAY)
+            {
+                if (!checkArrayEqual(lhs, rhs))
+                {
+                    printSemanticError(5, second->lineNum, "Type mismatched for assignment.", 0);
+                }
+            }
             t = rhs;
         }
         //左右类型必须相同且只能为int 或float
