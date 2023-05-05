@@ -512,10 +512,11 @@ Symbol* translateExp(Node* node, OperandPtr place)
             translateExp(first, left);
             OperandPtr right = newTemp();
             translateExp(second->sibling, right);
-            int type = IR_ASSIGN;
+            int type = IR_ASSIGN, retType = IR_ASSIGN;
             if (left->kind == OP_ADDRESS && right->kind != OP_ADDRESS)
             {
                 type = IR_WRITE_ADDR;
+                retType = IR_READ_ADDR;
             }
             else if (left->kind != OP_ADDRESS && right->kind == OP_ADDRESS)
             {
@@ -524,10 +525,10 @@ Symbol* translateExp(Node* node, OperandPtr place)
             else if (left->kind == OP_ADDRESS && right->kind == OP_ADDRESS)
             {
                 type = IR_READ_WRITE_ADDR;
+                retType = IR_READ_ADDR;
             }
-            InterCodePtr code = newInterCode(type, left, right);
-            InterCodesPtr codes = newInterCodes(code);
-            addInterCodes(codes);
+            addInterCodes(newInterCodes(newInterCode(type, left, right)));
+            addInterCodes(newInterCodes(newInterCode(retType, place, left)));
         }
         else if (strEqual(firstname, "MINUS"))
         {
