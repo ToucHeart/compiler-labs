@@ -17,3 +17,8 @@ char* mystrdup(const char* str)
     strcpy(p, str);
     return p;
 }
+
+int min(int a, int b)
+{
+    return a < b ? a : b;
+}

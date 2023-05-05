@@ -8,5 +8,5 @@ typedef unsigned long long ULL;
 #define NORMAL "\033[0m"
 bool strEqual(const char* str1, const char* str2);
 char* mystrdup(const char* str);
-
+int min(int a, int b);
 #endif

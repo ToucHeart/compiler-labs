@@ -219,15 +219,21 @@ void translateVarDec(Node* node, OperandPtr op, bool isParam)
         break;
         case TYPE_ARRAY://需要分配空间
         {
-            if (isParam)//是形参,op!=NULL
+            if (isParam)//是形参,op!=NULL,应该报错并退出
             {
-                setOpName(op, mystrdup(first->val.str));
                 printf(RED"Cannot translate: Code contains variables of multi-dimensional array type or "
                     " parameters of array type.\n"NORMAL);
                 exit(0);
+                // setOpName(op, mystrdup(first->val.str));
             }
             else//是变量定义,op==NULL
             {
+                if (sym->type->t.array.elem->kind == TYPE_ARRAY)//多维数组,应该报错
+                {
+                    printf(RED"Cannot translate: Code contains variables of multi-dimensional array type or "
+                        " parameters of array type.\n"NORMAL);
+                    exit(0);
+                }
                 OperandPtr arr = newOperand(OP_VARIABLE, 0, mystrdup(first->val.str));
                 InterCodePtr code = newInterCode(IR_DEC, arr, getTypeSize(sym->type));
                 InterCodesPtr codes = newInterCodes(code);
@@ -509,9 +515,9 @@ Symbol* translateExp(Node* node, OperandPtr place)
         else if (strEqual(secondname, "ASSIGNOP"))
         {
             OperandPtr left = newTemp();
-            translateExp(first, left);
+            Symbol* lhs = translateExp(first, left);
             OperandPtr right = newTemp();
-            translateExp(second->sibling, right);
+            Symbol* rhs = translateExp(second->sibling, right);
             int type = IR_ASSIGN, retType = IR_ASSIGN;
             if (left->kind == OP_ADDRESS && right->kind != OP_ADDRESS)
             {
@@ -527,8 +533,37 @@ Symbol* translateExp(Node* node, OperandPtr place)
                 type = IR_READ_WRITE_ADDR;
                 retType = IR_READ_ADDR;
             }
-            addInterCodes(newInterCodes(newInterCode(type, left, right)));
-            addInterCodes(newInterCodes(newInterCode(retType, place, left)));
+            if (lhs && lhs->type->kind == TYPE_ARRAY)//数组直接赋值或者是结构体中的数组直接赋值
+            {
+                //不会有结构体变量之间的直接赋值,不会出现高于一维的数组,因此只有一维数组赋值
+                int num = min(lhs->type->t.array.size, rhs->type->t.array.size);
+
+                OperandPtr leftCur = newTemp(), rightCur = newTemp();
+                int type = IR_GET_ADDR;
+                if (left->kind == OP_ADDRESS)
+                    type = IR_ASSIGN;
+                addInterCodes(newInterCodes(newInterCode(type, leftCur, left)));
+                addInterCodes(newInterCodes(newInterCode(type, rightCur, right)));//取地址
+
+                int w = getArrEleWidth(lhs);
+                OperandPtr one = newOperand(OP_CONSTANT, w, int2cptr(w));//得到元素宽度
+
+                addInterCodes(newInterCodes(newInterCode(IR_READ_WRITE_ADDR, leftCur, rightCur)));//赋值
+                for (int i = 1; i < num;++i)
+                {
+                    addInterCodes(newInterCodes(newInterCode(IR_ADD, leftCur, leftCur, one)));
+                    addInterCodes(newInterCodes(newInterCode(IR_ADD, rightCur, rightCur, one)));
+                    addInterCodes(newInterCodes(newInterCode(IR_READ_WRITE_ADDR, leftCur, rightCur)));
+                }
+                setOpKind(place, OP_STRUCT_ARR_ID);
+                setOpName(place, mystrdup(left->u.name));//将返回值设置为左侧的类型
+                return lhs;
+            }
+            else
+            {
+                addInterCodes(newInterCodes(newInterCode(type, left, right)));
+                addInterCodes(newInterCodes(newInterCode(retType, place, left)));
+            }
         }
         else if (strEqual(firstname, "MINUS"))
         {
