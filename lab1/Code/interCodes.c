@@ -161,6 +161,7 @@ InterCodePtr newInterCode(int kind, ...)
     assert(0);
     break;
     }
+    va_end(ap);
     return p;
 }
 
