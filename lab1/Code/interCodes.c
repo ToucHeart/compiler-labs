@@ -11,7 +11,7 @@
 #include"symbolTable.h"
 
 extern Node* root;
-static InterCodesList list;
+InterCodesList list;
 
 void setOpKind(OperandPtr op, int kind)
 {
