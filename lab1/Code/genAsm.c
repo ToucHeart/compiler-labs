@@ -1,7 +1,44 @@
 #include <stdio.h>
 #include "interCodes.h"
 #include "help.h"
+#define REG_NUM 32
+
 extern InterCodesList list;
+
+static const char *regs[REG_NUM] = {
+    "$zero",
+    "$at",
+    "$v0",
+    "$v1",
+    "$a0",
+    "$a1",
+    "$a2",
+    "$a3",
+    "$t0",
+    "$t1",
+    "$t2",
+    "$t3",
+    "$t4",
+    "$t5",
+    "$t6",
+    "$t7",
+    "$s0",
+    "$s1",
+    "$s2",
+    "$s3",
+    "$s4",
+    "$s5",
+    "$s6",
+    "$s7",
+    "$t8",
+    "$t9",
+    "$k0",
+    "$k1",
+    "$gp",
+    "$sp",
+    "$fp",
+    "$ra",
+};
 
 void printStartCode(FILE *output)
 {
@@ -14,42 +51,121 @@ void printStartCode(FILE *output)
     fputc('\n', output);
 }
 
-int getReg()
+const char *getReg()
 {
-    static int regnum = 0;
-    return regnum++;
+    static int i = 0;
+    i = (i + 1) % 32;
+    return regs[i];
 }
 
-void printRet(FILE *output)
+void printRet(FILE *output, OperandPtr op)
 {
     // move $v0, reg(x)
     // jr $ra
-    fprintf(output, "move $v0, %d", getReg());
+    // if (p->u.oneop.op->kind == OP_ADDRESS)
+    //     fprintf(output, "*");
+    // printOp(output, p->u.oneop.op);
+
+    fprintf(output, "move $v0, %s\n", getReg());
     fprintf(output, "jr $ra\n");
 }
 
+/*
+x := #k  li reg(x), k
+x := y   move reg(x), reg(y)
+*/
 void printAssign(FILE *output, OperandPtr left, OperandPtr right)
 {
     if (left == NULL)
         return;
-    
+    if (right->kind == OP_CONSTANT)
+    {
+        fprintf(output, "li %s, %d\n", getReg(), right->u.value);
+    }
+    else if (right->kind == OP_ADDRESS)
+    {
+        fprintf(output, "lw %s, 0(%s)", getReg(), getReg());
+    }
+    else if (left->kind == OP_ADDRESS)
+    {
+    }
+    else
+    {
+        fprintf(output, "move %s, %s\n", getReg(), getReg());
+    }
 }
 
-void printOp(FILE *output, OperandPtr op)
+/*
+x := y + #k     addi reg(x), reg(y), k
+x := y + z      add reg(x), reg(y), reg(z)
+x := y - #k     addi reg(x), reg(y), -k
+x := y – z      sub reg(x), reg(y), reg(z)
+x := y * z2     mul reg(x), reg(y), reg(z)
+x := y / z      div reg(y), reg(z)
+                mflo reg(x)
+*/
+void printCal(FILE *output, OperandPtr res, OperandPtr left, OperandPtr right, int kind)
 {
-    switch (op->kind)
+    switch (kind)
     {
-    case OP_CONSTANT:
-        fprintf(output, "#%d", op->u.value);
+    case IR_ADD:
+        if (right->kind == OP_CONSTANT)
+        {
+            fprintf(output, "addi %s, %s, %d\n", getReg(), getReg(), right->u.value);
+        }
+        else
+        {
+            fprintf(output, "add %s, %s, %s\n", getReg(), getReg(), getReg());
+        }
         break;
-    case OP_STRUCT_ARR_ID:
-    case OP_ADDRESS:
-    case OP_VARIABLE:
-    case OP_LABEL:
-    case OP_FUNCTION:
-    case OP_RELOP:
-        fprintf(output, "%s", op->u.name);
+    case IR_SUB:
+        if (right->kind == OP_CONSTANT)
+        {
+            fprintf(output, "addi %s, %s, -%d\n", getReg(), getReg(), right->u.value);
+        }
+        else
+        {
+            fprintf(output, "sub %s, %s, %s\n", getReg(), getReg(), getReg());
+        }
         break;
+    case IR_MUL:
+        fprintf(output, "mul %s, %s, %s\n", getReg(), getReg(), getReg());
+        break;
+    case IR_DIV:
+        fprintf(output, "div %s, %s\n", getReg(), getReg());
+        fprintf(output, "mflo %s\n", getReg());
+        break;
+    }
+}
+
+/*
+IF x == y GOTO z    beq reg(x), reg(y), z
+IF x != y GOTO z    bne reg(x), reg(y), z
+IF x > y GOTO z     bgt reg(x), reg(y), z
+IF x < y GOTO z     blt reg(x), reg(y), z
+IF x >= y GOTO z    bge reg(x), reg(y), z
+IF x <= y GOTO z    ble reg(x), reg(y), z
+*/
+void printGoto(FILE *output, OperandPtr left, OperandPtr op, OperandPtr right, OperandPtr result)
+{
+    if (strEqual(op->u.name, "=="))
+    {
+        fprintf(output, "beq %s, %s, %s\n", getReg(), getReg(), result->u.value);
+    }
+    else if (strEqual(op->u.name, "!="))
+    {
+    }
+    else if (strEqual(op->u.name, ">"))
+    {
+    }
+    else if (strEqual(op->u.name, "<"))
+    {
+    }
+    else if (strEqual(op->u.name, ">="))
+    {
+    }
+    else if (strEqual(op->u.name, "<="))
+    {
     }
 }
 
@@ -58,13 +174,13 @@ void printasm(FILE *output, InterCodePtr p)
     switch (p->kind)
     {
     case IR_FUNCTION:
-        printOp(output, p->u.oneop.op);
+        printOp(output, getOneOpOp(p));
         fprintf(output, ":\n");
         break;
 
     case IR_PARAM:
         fprintf(output, "PARAM ");
-        printOp(output, p->u.oneop.op);
+        printOp(output, getOneOpOp(p));
         break;
 
     case IR_DEC:
@@ -72,7 +188,7 @@ void printasm(FILE *output, InterCodePtr p)
         break;
 
     case IR_ASSIGN:
-
+        printAssign(output, getAssLeft(p), getAssRight(p));
         break;
 
     case IR_GET_ADDR: // 将地址赋给临时变量
@@ -84,16 +200,11 @@ void printasm(FILE *output, InterCodePtr p)
         break;
 
     case IR_READ_ADDR:
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := *");
-        printOp(output, p->u.assign.right);
+        printAssign(output, getAssLeft(p), getAssRight(p));
         break;
 
     case IR_WRITE_ADDR:
-        fprintf(output, "*");
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := ");
-        printOp(output, p->u.assign.right);
+        printAssign(output, getAssLeft(p), getAssRight(p));
         break;
 
     case IR_READ_WRITE_ADDR:
@@ -107,75 +218,25 @@ void printasm(FILE *output, InterCodePtr p)
     case IR_SUB:
     case IR_MUL:
     case IR_DIV:
-        if (p->u.binop.result == NULL)
-            return;
-        printOp(output, p->u.binop.result);
-        fprintf(output, " := ");
-        if (p->u.binop.left->kind == OP_ADDRESS)
-        {
-            fprintf(output, "*");
-        }
-        printOp(output, p->u.binop.left);
-        {
-            switch (p->kind)
-            {
-            case IR_ADD:
-                fprintf(output, " + ");
-                break;
-            case IR_SUB:
-                fprintf(output, " - ");
-                break;
-            case IR_MUL:
-                fprintf(output, " * ");
-                break;
-            case IR_DIV:
-                fprintf(output, " / ");
-                break;
-            default:
-                break;
-            }
-        }
-        if (p->u.binop.right->kind == OP_ADDRESS)
-        {
-            fprintf(output, "*");
-        }
-        printOp(output, p->u.binop.right);
+        printCal(output, getBinRes(p), getBinLeft(p), getBinRight(p), p->kind);
         break;
 
     case IR_RETURN:
-        if (p->u.oneop.op->kind == OP_ADDRESS)
-            fprintf(output, "*");
-        printOp(output, p->u.oneop.op);
+        printRet(output, getOneOpOp(p));
         break;
 
     case IR_GOTO:
         fprintf(output, "j ");
-        printOp(output, p->u.oneop.op);
+        printOp(output, getOneOpOp(p));
         break;
 
     case IR_LABEL:
-        printOp(output, p->u.oneop.op);
+        printOp(output, getOneOpOp(p));
         fprintf(output, ":");
         break;
 
     case IR_IF_GOTO:
-        fprintf(output, "IF ");
-        if (p->u.ifgoto.left->kind == OP_ADDRESS)
-        {
-            fprintf(output, "*");
-        }
-        printOp(output, p->u.ifgoto.left);
-        fprintf(output, " ");
-        printOp(output, p->u.ifgoto.op);
-        fprintf(output, " ");
-        if (p->u.ifgoto.right->kind == OP_ADDRESS)
-        {
-            fprintf(output, "*");
-        }
-        printOp(output, p->u.ifgoto.right);
-        fprintf(output, " ");
-        fprintf(output, "GOTO ");
-        printOp(output, p->u.ifgoto.result);
+        printGoto(output, getGotoleft(p), getGotoOp(p), getGotoRight(p), getGotoResult(p));
         break;
 
     case IR_READ:

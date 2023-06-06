@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "bit": "c",
+        "*.tcc": "c",
+        "exception": "c",
+        "algorithm": "c",
+        "functional": "c",
+        "iterator": "c",
+        "memory": "c",
+        "limits": "c",
+        "numeric": "c",
+        "streambuf": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "intercodes.h": "c",
+        "symboltable.h": "c"
+    }
+}
