@@ -77,7 +77,7 @@ typedef struct ObjectCode
         } sw;
         struct
         {
-            int x
+            int label;
         } j;
         struct
         {

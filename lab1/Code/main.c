@@ -7,7 +7,8 @@ extern int yydebug;
 extern void semanticAnalyse();
 extern void genInterCodes();
 extern void printInterCodes(FILE *output);
-extern void printAsm(FILE *output);
+extern void printObjectCodes(FILE *output);
+extern void genObjectCode();
 
 int main(int argc, char *argv[])
 {
@@ -18,14 +19,14 @@ int main(int argc, char *argv[])
         return 1;
     }
     FILE *input = fopen(argv[1], "r");
-    FILE *asmfile = fopen(argv[2], "w+");
+    FILE *ocfile = fopen(argv[2], "w+");
     FILE *irfile = fopen("./out.ir", "w+");
     if (!input)
     {
         perror(argv[1]);
         return 1;
     }
-    if (!asmfile)
+    if (!ocfile)
     {
         perror(argv[2]);
         return 1;
@@ -35,7 +36,7 @@ int main(int argc, char *argv[])
         perror("out.ir not exists\n");
         return 1;
     }
-    setbuf(asmfile, NULL);
+    setbuf(ocfile, NULL);
     yyrestart(input);
     yyparse();
     if (!hasError)
@@ -44,8 +45,8 @@ int main(int argc, char *argv[])
         semanticAnalyse();
         genInterCodes();
         printInterCodes(irfile);
-        genAsm();
-        printAsm(asmfile);
+        genObjectCode();
+        printObjectCodes(ocfile);
     }
     freeMemory();
     return 0;

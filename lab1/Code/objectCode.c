@@ -29,7 +29,11 @@ ObjectCodePtr newObjectCode(OC_Kind k, ...)
         p->li.reg = va_arg(ap, int);
         p->li.imm = va_arg(ap, int);
         break;
-    
+    case OC_ADD:
+        p->add.regx = va_arg(ap, int);
+        p->add.regy = va_arg(ap, int);
+        p->add.regz = va_arg(ap, int);
+        break;
     }
     va_end(ap);
     return p;

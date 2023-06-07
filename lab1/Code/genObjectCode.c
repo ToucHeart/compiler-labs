@@ -55,19 +55,8 @@ void printStartCode(FILE *output)
 }
 
 /*
-move $v0, reg(x)
-jr $ra
-if (p->u.oneop.op->kind == OP_ADDRESS)
-    fprintf(output, "*");
-printOp(output, p->u.oneop.op);
-*/
-
-/*
 x := #k  li reg(x), k
 x := y   move reg(x), reg(y)
-*/
-
-/*
 x := y + #k     addi reg(x), reg(y), k
 x := y + z      add reg(x), reg(y), reg(z)
 x := y - #k     addi reg(x), reg(y), -k
@@ -75,9 +64,6 @@ x := y – z      sub reg(x), reg(y), reg(z)
 x := y * z2     mul reg(x), reg(y), reg(z)
 x := y / z      div reg(y), reg(z)
                 mflo reg(x)
-*/
-
-/*
 IF x == y GOTO z    beq reg(x), reg(y), z
 IF x != y GOTO z    bne reg(x), reg(y), z
 IF x > y GOTO z     bgt reg(x), reg(y), z
@@ -86,120 +72,219 @@ IF x >= y GOTO z    bge reg(x), reg(y), z
 IF x <= y GOTO z    ble reg(x), reg(y), z
 */
 
-void genObjectCode(FILE *output, InterCodePtr p)
+void genOc(InterCodePtr p)
 {
+    ObjectCodePtr ptr;
+    int regx, regy, regz;
+    int left, right;
     switch (p->kind)
     {
     case IR_FUNCTION:
-        ObjectCodePtr ptr = newObjectCode(OC_FUNC, mystrdup(p->u.oneop.op->u.name));
+        ptr = newObjectCode(OC_FUNC, mystrdup(p->u.oneop.op->u.name));
         addObjectCode(ocHead, ptr);
         break;
     case IR_LABEL:
-        ObjectCodePtr ptr = newObjectCode(OC_LABEL, mystrdup(p->u.oneop.op->u.name));
+        ptr = newObjectCode(OC_LABEL, mystrdup(p->u.oneop.op->u.name));
         addObjectCode(ocHead, ptr);
         break;
 
     case IR_PARAM:
-        fprintf(output, "PARAM ");
-        printOp(output, getOneOpOp(p));
+        // fprintf(output, "PARAM ");
+        // printOp(output, getOneOpOp(p));
         break;
 
     case IR_DEC:
-        fprintf(output, "DEC %s %d", p->u.dec.varName->u.name, p->u.dec.size);
+        // fprintf(output, "DEC %s %d", p->u.dec.varName->u.name, p->u.dec.size);
         break;
 
     case IR_ASSIGN:
-        int regx; // TODO:
         if (p->u.assign.right->kind == OP_CONSTANT)
         {
-            ObjectCodePtr ptr = newObjectCode(OC_LI, regx, p->u.assign.right->u.value);
+            ptr = newObjectCode(OC_LI, regx, p->u.assign.right->u.value);
             addObjectCode(ocHead, ptr);
         }
         else
         {
-            int regy; // TODO:
-            ObjectCodePtr ptr = newObjectCode(OC_MOVE, regx, regy);
+            ptr = newObjectCode(OC_MOVE, regx, regy);
             addObjectCode(ocHead, ptr);
         }
         break;
 
     case IR_GET_ADDR: // 将地址赋给临时变量
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := ");
-        if (p->u.assign.right->isArg == false)
-            fprintf(output, "&");
-        printOp(output, p->u.assign.right);
+        // printOp(output, p->u.assign.left);
+        // fprintf(output, " := ");
+        // if (p->u.assign.right->isArg == false)
+        //     fprintf(output, "&");
+        // printOp(output, p->u.assign.right);
         break;
 
     case IR_READ_ADDR:
-        printAssign(output, getAssLeft(p), getAssRight(p));
+        // printAssign(output, getAssLeft(p), getAssRight(p));
         break;
 
     case IR_WRITE_ADDR:
-        printAssign(output, getAssLeft(p), getAssRight(p));
+        // printAssign(output, getAssLeft(p), getAssRight(p));
         break;
 
     case IR_READ_WRITE_ADDR:
-        fprintf(output, "*");
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := *");
-        printOp(output, p->u.assign.right);
+        // fprintf(output, "*");
+        // printOp(output, p->u.assign.left);
+        // fprintf(output, " := *");
+        // printOp(output, p->u.assign.right);
         break;
 
     case IR_ADD:
-        
+        left = p->u.binop.left->kind;
+        right = p->u.binop.right->kind;
+        if (left == OP_CONSTANT)
+        {
+            ptr = newObjectCode(OC_LI, regy, p->u.binop.left->u.value);
+            addObjectCode(ocHead, ptr);
+        }
+        if (right == OP_CONSTANT)
+        {
+            ptr = newObjectCode(OC_ADDI, regx, regy, p->u.binop.right->u.value);
+            addObjectCode(ocHead, ptr);
+        }
+        else
+        {
+            ptr = newObjectCode(OC_ADD, regx, regy, regz);
+            addObjectCode(ocHead, ptr);
+        }
         break;
     case IR_SUB:
+        left = p->u.binop.left->kind;
+        right = p->u.binop.right->kind;
+        if (left == OP_CONSTANT)
+        {
+            ptr = newObjectCode(OC_LI, regy, p->u.binop.left->u.value);
+            addObjectCode(ocHead, ptr);
+        }
+        if (right == OP_CONSTANT)
+        {
+            ptr = newObjectCode(OC_ADDI, regx, regy, -p->u.binop.right->u.value);
+            addObjectCode(ocHead, ptr);
+        }
+        else
+        {
+            ptr = newObjectCode(OC_SUB, regx, regy, regz);
+            addObjectCode(ocHead, ptr);
+        }
+        break;
     case IR_MUL:
+        left = p->u.binop.left->kind;
+        right = p->u.binop.right->kind;
+        if (left == OP_CONSTANT)
+        {
+            ptr = newObjectCode(OC_LI, regy, p->u.binop.left->u.value);
+            addObjectCode(ocHead, ptr);
+        }
+        if (right == OP_CONSTANT)
+        {
+            ptr = newObjectCode(OC_LI, regz, p->u.binop.right->u.value);
+            addObjectCode(ocHead, ptr);
+        }
+        ptr = newObjectCode(OC_MUL, regx, regy, regz);
+        addObjectCode(ocHead, ptr);
+        break;
     case IR_DIV:
-
+        left = p->u.binop.left->kind;
+        right = p->u.binop.right->kind;
+        if (left == OP_CONSTANT)
+        {
+            ptr = newObjectCode(OC_LI, regy, p->u.binop.left->u.value);
+            addObjectCode(ocHead, ptr);
+        }
+        if (right == OP_CONSTANT)
+        {
+            ptr = newObjectCode(OC_LI, regz, p->u.binop.right->u.value);
+            addObjectCode(ocHead, ptr);
+        }
+        ptr = newObjectCode(OC_DIV, regy, regz);
+        addObjectCode(ocHead, ptr);
+        ptr = newObjectCode(OC_MFLO, regx);
+        addObjectCode(ocHead, ptr);
         break;
 
     case IR_RETURN:
+        ptr = newObjectCode(OC_MOVE, 2, regx);
+        addObjectCode(ocHead, ptr);
+        ptr = newObjectCode(OC_JR);
+        addObjectCode(ocHead, ptr);
         break;
 
     case IR_GOTO:
-        fprintf(output, "j ");
-        printOp(output, getOneOpOp(p));
+        ptr = newObjectCode(OC_J, mystrdup(p->u.oneop.op->u.name));
+        addObjectCode(ocHead, ptr);
         break;
 
     case IR_IF_GOTO:
-        printGoto(output, getGotoleft(p), getGotoOp(p), getGotoRight(p), getGotoResult(p));
-        break;
+    {
+        OC_Kind k;
+        char *op = p->u.ifgoto.op->u.name;
+        if (strEqual(op, "!="))
+            k = OC_BNE;
+        else if (strEqual(op, "=="))
+            k = OC_BEQ;
+        else if (strEqual(op, ">"))
+            k = OC_BGT;
+        else if (strEqual(op, "<"))
+            k = OC_BLT;
+        else if (strEqual(op, "<="))
+            k = OC_BLE;
+        else if (strEqual(op, ">="))
+            k = OC_BGE;
+        ptr = newObjectCode(k, regx, regy, mystrdup(p->u.ifgoto.result->u.name));
+        addObjectCode(ocHead, ptr);
+    }
+    break;
 
     case IR_READ:
-        fprintf(output, "READ ");
-        printOp(output, p->u.oneop.op);
+        // fprintf(output, "READ ");
+        // printOp(output, p->u.oneop.op);
         break;
 
     case IR_WRITE:
-        fprintf(output, "WRITE ");
-        if (p->u.oneop.op->kind == OP_ADDRESS)
-            fprintf(output, "*");
-        printOp(output, p->u.oneop.op);
+        // fprintf(output, "WRITE ");
+        // if (p->u.oneop.op->kind == OP_ADDRESS)
+        //     fprintf(output, "*");
+        // printOp(output, p->u.oneop.op);
         break;
     case IR_CALL:
-        if (p->u.assign.left->kind == OP_ADDRESS)
-            fprintf(output, "*");
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := CALL ");
-        printOp(output, p->u.assign.right);
+        // if (p->u.assign.left->kind == OP_ADDRESS)
+        //     fprintf(output, "*");
+        // printOp(output, p->u.assign.left);
+        // fprintf(output, " := CALL ");
+        // printOp(output, p->u.assign.right);
+        ptr = newObjectCode(OC_JAL, mystrdup(p->u.assign.right->u.name));
+        addObjectCode(ocHead, ptr);
+        ptr = newObjectCode(OC_MOVE, regx, 2);
+        addObjectCode(ocHead, ptr);
         break;
 
     case IR_ARG:
-        fprintf(output, "ARG ");
-        if (p->u.oneop.op->kind == OP_STRUCT_ARR_ID)
-            fprintf(output, "&");
-        else if (p->u.oneop.op->kind == OP_ADDRESS && p->u.oneop.op->isBasicAddr)
-            fprintf(output, "*");
-        printOp(output, p->u.oneop.op);
+        // fprintf(output, "ARG ");
+        // if (p->u.oneop.op->kind == OP_STRUCT_ARR_ID)
+        //     fprintf(output, "&");
+        // else if (p->u.oneop.op->kind == OP_ADDRESS && p->u.oneop.op->isBasicAddr)
+        //     fprintf(output, "*");
+        // printOp(output, p->u.oneop.op);
         break;
     default:
         fprintf(stderr, RED "code type is %d\n" NORMAL, p->kind);
         assert(0);
         break;
     }
-    fprintf(output, "\n");
+}
+
+void genObjectCode()
+{
+    InterCodesPtr p = list.dummyHead->next;
+    while (p != list.dummyHead)
+    {
+        genOc(p->code);
+        p = p->next;
+    }
 }
 
 #define STR(x) #x
@@ -244,7 +329,7 @@ void printObjectCode(FILE *output, ObjectCodePtr p)
         OP_ROR(sw, p->sw.regy, p->sw.offset, p->sw.regx)
         break;
     case OC_J:
-        fprintf(output, "j label%d", p->j.x);
+        fprintf(output, "j label%d", p->j.label);
         break;
     case OC_JAL:
         fprintf(output, "jal %s", p->jal.f);
