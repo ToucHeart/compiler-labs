@@ -20,19 +20,21 @@ ObjectCodePtr newObjectCode(OC_Kind k, ...)
     switch (k)
     {
     case OC_FUNC:
-        p->func.funcname = va_arg(ap, char *);
-        break;
+    p->func.funcname = va_arg(ap, char*);
+    break;
     case OC_LABEL:
-        p->label.x = va_arg(ap, char *);
-        break;
+    p->label.x = va_arg(ap, char*);
+    break;
     case OC_LI:
-        p->li.reg = va_arg(ap, int);
-        p->li.imm = va_arg(ap, int);
-        break;
+    p->li.reg = va_arg(ap, int);
+    p->li.imm = va_arg(ap, int);
+    break;
     case OC_ADD:
-        p->add.regx = va_arg(ap, int);
-        p->add.regy = va_arg(ap, int);
-        p->add.regz = va_arg(ap, int);
+    p->add.regx = va_arg(ap, int);
+    p->add.regy = va_arg(ap, int);
+    p->add.regz = va_arg(ap, int);
+    break;
+    default:;
         break;
     }
     va_end(ap);
