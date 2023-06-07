@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include "interCodes.h"
 #include "help.h"
-#define REG_NUM 32
+#include "objectCode.h"
 
 extern InterCodesList list;
+static ObjectCodePtr ocHead;
 
+#define REG_NUM 32
 static const char *regs[REG_NUM] = {
     "$zero",
     "$at",
@@ -39,10 +41,11 @@ static const char *regs[REG_NUM] = {
     "$fp",
     "$ra",
 };
+#define REG(X) regs[X]
 
 void printStartCode(FILE *output)
 {
-    FILE *startcode = fopen("partcode.s", "r");
+    FILE *startcode = fopen("startCode.s", "r");
     int c;
     while ((c = fgetc(startcode)) != EOF)
     {
@@ -51,49 +54,18 @@ void printStartCode(FILE *output)
     fputc('\n', output);
 }
 
-const char *getReg()
-{
-    static int i = 0;
-    i = (i + 1) % 32;
-    return regs[i];
-}
-
-void printRet(FILE *output, OperandPtr op)
-{
-    // move $v0, reg(x)
-    // jr $ra
-    // if (p->u.oneop.op->kind == OP_ADDRESS)
-    //     fprintf(output, "*");
-    // printOp(output, p->u.oneop.op);
-
-    fprintf(output, "move $v0, %s\n", getReg());
-    fprintf(output, "jr $ra\n");
-}
+/*
+move $v0, reg(x)
+jr $ra
+if (p->u.oneop.op->kind == OP_ADDRESS)
+    fprintf(output, "*");
+printOp(output, p->u.oneop.op);
+*/
 
 /*
 x := #k  li reg(x), k
 x := y   move reg(x), reg(y)
 */
-void printAssign(FILE *output, OperandPtr left, OperandPtr right)
-{
-    if (left == NULL)
-        return;
-    if (right->kind == OP_CONSTANT)
-    {
-        fprintf(output, "li %s, %d\n", getReg(), right->u.value);
-    }
-    else if (right->kind == OP_ADDRESS)
-    {
-        fprintf(output, "lw %s, 0(%s)", getReg(), getReg());
-    }
-    else if (left->kind == OP_ADDRESS)
-    {
-    }
-    else
-    {
-        fprintf(output, "move %s, %s\n", getReg(), getReg());
-    }
-}
 
 /*
 x := y + #k     addi reg(x), reg(y), k
@@ -104,39 +76,6 @@ x := y * z2     mul reg(x), reg(y), reg(z)
 x := y / z      div reg(y), reg(z)
                 mflo reg(x)
 */
-void printCal(FILE *output, OperandPtr res, OperandPtr left, OperandPtr right, int kind)
-{
-    switch (kind)
-    {
-    case IR_ADD:
-        if (right->kind == OP_CONSTANT)
-        {
-            fprintf(output, "addi %s, %s, %d\n", getReg(), getReg(), right->u.value);
-        }
-        else
-        {
-            fprintf(output, "add %s, %s, %s\n", getReg(), getReg(), getReg());
-        }
-        break;
-    case IR_SUB:
-        if (right->kind == OP_CONSTANT)
-        {
-            fprintf(output, "addi %s, %s, -%d\n", getReg(), getReg(), right->u.value);
-        }
-        else
-        {
-            fprintf(output, "sub %s, %s, %s\n", getReg(), getReg(), getReg());
-        }
-        break;
-    case IR_MUL:
-        fprintf(output, "mul %s, %s, %s\n", getReg(), getReg(), getReg());
-        break;
-    case IR_DIV:
-        fprintf(output, "div %s, %s\n", getReg(), getReg());
-        fprintf(output, "mflo %s\n", getReg());
-        break;
-    }
-}
 
 /*
 IF x == y GOTO z    beq reg(x), reg(y), z
@@ -146,36 +85,18 @@ IF x < y GOTO z     blt reg(x), reg(y), z
 IF x >= y GOTO z    bge reg(x), reg(y), z
 IF x <= y GOTO z    ble reg(x), reg(y), z
 */
-void printGoto(FILE *output, OperandPtr left, OperandPtr op, OperandPtr right, OperandPtr result)
-{
-    if (strEqual(op->u.name, "=="))
-    {
-        fprintf(output, "beq %s, %s, %s\n", getReg(), getReg(), result->u.value);
-    }
-    else if (strEqual(op->u.name, "!="))
-    {
-    }
-    else if (strEqual(op->u.name, ">"))
-    {
-    }
-    else if (strEqual(op->u.name, "<"))
-    {
-    }
-    else if (strEqual(op->u.name, ">="))
-    {
-    }
-    else if (strEqual(op->u.name, "<="))
-    {
-    }
-}
 
-void printasm(FILE *output, InterCodePtr p)
+void genObjectCode(FILE *output, InterCodePtr p)
 {
     switch (p->kind)
     {
     case IR_FUNCTION:
-        printOp(output, getOneOpOp(p));
-        fprintf(output, ":\n");
+        ObjectCodePtr ptr = newObjectCode(OC_FUNC, mystrdup(p->u.oneop.op->u.name));
+        addObjectCode(ocHead, ptr);
+        break;
+    case IR_LABEL:
+        ObjectCodePtr ptr = newObjectCode(OC_LABEL, mystrdup(p->u.oneop.op->u.name));
+        addObjectCode(ocHead, ptr);
         break;
 
     case IR_PARAM:
@@ -188,7 +109,18 @@ void printasm(FILE *output, InterCodePtr p)
         break;
 
     case IR_ASSIGN:
-        printAssign(output, getAssLeft(p), getAssRight(p));
+        int regx; // TODO:
+        if (p->u.assign.right->kind == OP_CONSTANT)
+        {
+            ObjectCodePtr ptr = newObjectCode(OC_LI, regx, p->u.assign.right->u.value);
+            addObjectCode(ocHead, ptr);
+        }
+        else
+        {
+            int regy; // TODO:
+            ObjectCodePtr ptr = newObjectCode(OC_MOVE, regx, regy);
+            addObjectCode(ocHead, ptr);
+        }
         break;
 
     case IR_GET_ADDR: // 将地址赋给临时变量
@@ -215,24 +147,20 @@ void printasm(FILE *output, InterCodePtr p)
         break;
 
     case IR_ADD:
+        
+        break;
     case IR_SUB:
     case IR_MUL:
     case IR_DIV:
-        printCal(output, getBinRes(p), getBinLeft(p), getBinRight(p), p->kind);
+
         break;
 
     case IR_RETURN:
-        printRet(output, getOneOpOp(p));
         break;
 
     case IR_GOTO:
         fprintf(output, "j ");
         printOp(output, getOneOpOp(p));
-        break;
-
-    case IR_LABEL:
-        printOp(output, getOneOpOp(p));
-        fprintf(output, ":");
         break;
 
     case IR_IF_GOTO:
@@ -274,13 +202,85 @@ void printasm(FILE *output, InterCodePtr p)
     fprintf(output, "\n");
 }
 
-void printAsm(FILE *output)
+#define STR(x) #x
+#define OP_RRR(instr, r1, r2, r3) fprintf(output, STR(instr) " %s, %s, %s", REG(r1), REG(r2), REG(r3));
+#define OP_RRI(instr, r1, r2, imm) fprintf(output, STR(instr) " %s, %s, %d", REG(r1), REG(r2), imm);
+#define OP_RR(instr, r1, r2) fprintf(output, STR(instr) " %s, %s", REG(r1), REG(r2));
+#define OP_R(instr, r1) fprintf(output, STR(instr) " %s", REG(r1));
+#define OP_ROR(instr, r1, offset, r2) fprintf(output, STR(instr) " %s, %d(%s)", REG(r1), offset, REG(r2));
+
+void printObjectCode(FILE *output, ObjectCodePtr p)
+{
+    switch (p->kind)
+    {
+    case OC_FUNC:
+        fprintf(output, "%s:", p->func.funcname);
+        break;
+    case OC_LABEL:
+        fprintf(output, "%s", p->label.x);
+        break;
+    case OC_ADD: // add reg(x), reg(y), reg(z)
+        OP_RRR(add, p->add.regx, p->add.regy, p->add.regz)
+        break;
+    case OC_ADDI: // addi reg(x), reg(y), k
+        OP_RRI(addi, p->addi.regx, p->addi.regy, p->addi.imm)
+        break;
+    case OC_SUB: // sub reg(x), reg(y), reg(z)
+        OP_RRR(sub, p->add.regx, p->add.regy, p->add.regz)
+        break;
+    case OC_MUL: // mul reg(x), reg(y), reg(z)
+        OP_RRR(mul, p->mul.regx, p->mul.regy, p->mul.regz);
+        break;
+    case OC_DIV: // div reg(y), reg(z)
+        OP_RR(div, p->div.regy, p->div.regz)
+        break;
+    case OC_MFLO: // mflo reg(x)
+        OP_R(mflo, p->mflo.regx)
+        break;
+    case OC_LW: // lw reg(x), 0(reg(y))
+        OP_ROR(lw, p->lw.regx, p->lw.offset, p->lw.regy)
+        break;
+    case OC_SW: // sw reg(y), 0(reg(x))
+        OP_ROR(sw, p->sw.regy, p->sw.offset, p->sw.regx)
+        break;
+    case OC_J:
+        fprintf(output, "j label%d", p->j.x);
+        break;
+    case OC_JAL:
+        fprintf(output, "jal %s", p->jal.f);
+        break;
+    case OC_JR:
+        fprintf(output, "jr $ra");
+        break;
+    case OC_BEQ: // beq reg(x), reg(y), z
+        OP_RRI(beq, p->beq.regx, p->beq.regy, p->beq.z)
+        break;
+    case OC_BNE:
+        OP_RRI(bne, p->bne.regx, p->bne.regy, p->bne.z)
+        break;
+    case OC_BGT:
+        OP_RRI(bgt, p->bgt.regx, p->bgt.regy, p->bgt.z)
+        break;
+    case OC_BLT:
+        OP_RRI(blt, p->blt.regx, p->blt.regy, p->blt.z)
+        break;
+    case OC_BGE:
+        OP_RRI(bge, p->bge.regx, p->bge.regy, p->bge.z)
+        break;
+    case OC_BLE:
+        OP_RRI(ble, p->ble.regx, p->ble.regy, p->ble.z)
+        break;
+    }
+    fprintf(output, "\n");
+}
+
+void printObjectCodes(FILE *output)
 {
     printStartCode(output);
-    InterCodesPtr p = list.dummyHead->next;
-    while (p != list.dummyHead)
+    ObjectCodePtr p = ocHead->next;
+    while (p != ocHead)
     {
-        printasm(output, p->code);
+        printObjectCode(output, p);
         p = p->next;
     }
 }

@@ -44,7 +44,8 @@ int main(int argc, char *argv[])
         semanticAnalyse();
         genInterCodes();
         printInterCodes(irfile);
-        // printAsm(asmfile);
+        genAsm();
+        printAsm(asmfile);
     }
     freeMemory();
     return 0;
