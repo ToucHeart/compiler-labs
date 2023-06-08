@@ -1,5 +1,7 @@
 #ifndef __OBJECT_CODE__
 #define __OBJECT_CODE__
+#include<stdbool.h>
+
 typedef enum
 {
     OC_NONE,
@@ -24,6 +26,7 @@ typedef enum
     OC_BLT,
     OC_BGE,
     OC_BLE,
+    OC_LA,
 } OC_Kind;
 
 typedef struct ObjectCode
@@ -33,7 +36,7 @@ typedef struct ObjectCode
     {
         struct
         {
-            char *x; // lebel index
+            char* x; // lebel index
         } label;
         struct
         {
@@ -69,11 +72,11 @@ typedef struct ObjectCode
         } mflo;
         struct
         {
-            int regx, regy, offset;
+            int regx, offset, regy;
         } lw;
         struct
         {
-            int regy, regx, offset;
+            int regy, offset, regx;
         } sw;
         struct
         {
@@ -81,7 +84,7 @@ typedef struct ObjectCode
         } j;
         struct
         {
-            char *f;
+            char* f;
         } jal;
         struct
         {
@@ -109,13 +112,74 @@ typedef struct ObjectCode
         } ble;
         struct
         {
-            char *funcname;
+            char* funcname;
         } func;
+        struct
+        {
+            int reg;
+            char* name;
+        }la;
     };
-    struct ObjectCode *prev, *next;
+    struct ObjectCode* prev, * next;
 } ObjectCode;
-typedef ObjectCode *ObjectCodePtr;
+typedef ObjectCode* ObjectCodePtr;
 void addObjectCode(ObjectCodePtr dummyHead, ObjectCodePtr p);
 ObjectCodePtr newObjectCode(OC_Kind k, ...);
-void initOClist(ObjectCodePtr dummyHead);
+
+
+typedef enum regNo
+{
+    REG_ZERO,
+    REG_AT,
+    REG_V0,
+    REG_V1,
+    REG_A0,
+    REG_A1,
+    REG_A2,
+    REG_A3,
+    REG_T0,
+    REG_T1,
+    REG_T2,
+    REG_T3,
+    REG_T4,
+    REG_T5,
+    REG_T6,
+    REG_T7,
+    REG_S0,
+    REG_S1,
+    REG_S2,
+    REG_S3,
+    REG_S4,
+    REG_S5,
+    REG_S6,
+    REG_S7,
+    REG_T8,
+    REG_T9,
+    REG_K0,
+    REG_K1,
+    REG_GP,
+    REG_SP,
+    REG_FP,
+    REG_RA,
+    REG_NUM,
+}regNo;
+
+#define MIN_AVAIL_REG REG_T0
+#define MAX_AVAIL_REG REG_K0
+
+
+typedef struct Var
+{
+    char* name;
+    int reg;
+    int offset;
+    struct Var* next;
+} Var;
+typedef Var* VarPtr;
+
+typedef struct Register
+{
+    VarPtr var;
+} Register;
+
 #endif

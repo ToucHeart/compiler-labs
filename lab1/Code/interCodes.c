@@ -10,7 +10,7 @@
 #include <stdarg.h>
 #include "symbolTable.h"
 
-extern Node *root;
+extern Node* root;
 InterCodesList list;
 
 void setOpKind(OperandPtr op, int kind)
@@ -34,7 +34,7 @@ void setOpVal(OperandPtr op, int value)
     op->u.value = value;
 }
 
-void setOpName(OperandPtr op, char *name)
+void setOpName(OperandPtr op, char* name)
 {
     if (op == NULL)
         return;
@@ -43,7 +43,7 @@ void setOpName(OperandPtr op, char *name)
     op->u.name = name;
 }
 
-OperandPtr newOperand(int kind, char *name)
+OperandPtr newOperand(int kind, char* name)
 {
     OperandPtr op = (OperandPtr)malloc(sizeof(Operand));
     op->kind = kind;
@@ -64,7 +64,7 @@ OperandPtr newTemp()
 {
     char tempname[10];
     sprintf(tempname, "t%d", list.tmpIndex++);
-    OperandPtr temp = newOperand(OP_VARIABLE, mystrdup(tempname));
+    OperandPtr temp = newOperand(OP_TEMP, mystrdup(tempname));
     return temp;
 }
 
@@ -110,54 +110,54 @@ InterCodePtr newInterCode(int kind, ...)
     case IR_READ:
     case IR_WRITE:
     case IR_ARG:
-        p->u.oneop.op = va_arg(ap, OperandPtr);
-        break;
+    p->u.oneop.op = va_arg(ap, OperandPtr);
+    break;
 
     case IR_ASSIGN:
     case IR_READ_ADDR:
     case IR_WRITE_ADDR:
     case IR_READ_WRITE_ADDR:
     case IR_GET_ADDR:
-        p->u.assign.left = va_arg(ap, OperandPtr);
-        p->u.assign.right = va_arg(ap, OperandPtr);
-        break;
+    p->u.assign.left = va_arg(ap, OperandPtr);
+    p->u.assign.right = va_arg(ap, OperandPtr);
+    break;
 
     case IR_DEC:
-        p->u.dec.varName = va_arg(ap, OperandPtr);
-        p->u.dec.size = va_arg(ap, int);
-        break;
+    p->u.dec.varName = va_arg(ap, OperandPtr);
+    p->u.dec.size = va_arg(ap, int);
+    break;
 
     case IR_ADD:
     case IR_SUB:
     case IR_MUL:
     case IR_DIV:
-        p->u.binop.result = va_arg(ap, OperandPtr);
-        p->u.binop.left = va_arg(ap, OperandPtr);
-        p->u.binop.right = va_arg(ap, OperandPtr);
-        break;
+    p->u.binop.result = va_arg(ap, OperandPtr);
+    p->u.binop.left = va_arg(ap, OperandPtr);
+    p->u.binop.right = va_arg(ap, OperandPtr);
+    break;
 
     case IR_IF_GOTO:
-        p->u.ifgoto.left = va_arg(ap, OperandPtr);
-        p->u.ifgoto.op = va_arg(ap, OperandPtr);
-        p->u.ifgoto.right = va_arg(ap, OperandPtr);
-        p->u.ifgoto.result = va_arg(ap, OperandPtr);
-        break;
+    p->u.ifgoto.left = va_arg(ap, OperandPtr);
+    p->u.ifgoto.op = va_arg(ap, OperandPtr);
+    p->u.ifgoto.right = va_arg(ap, OperandPtr);
+    p->u.ifgoto.result = va_arg(ap, OperandPtr);
+    break;
 
     case IR_GOTO:
-        p->u.oneop.op = va_arg(ap, OperandPtr);
-        break;
+    p->u.oneop.op = va_arg(ap, OperandPtr);
+    break;
     case IR_LABEL:
-        p->u.oneop.op = va_arg(ap, OperandPtr);
-        break;
+    p->u.oneop.op = va_arg(ap, OperandPtr);
+    break;
 
     case IR_CALL:
-        p->u.assign.left = va_arg(ap, OperandPtr);
-        p->u.assign.right = va_arg(ap, OperandPtr);
-        break;
+    p->u.assign.left = va_arg(ap, OperandPtr);
+    p->u.assign.right = va_arg(ap, OperandPtr);
+    break;
 
     default:
-        assert(0);
-        break;
+    assert(0);
+    break;
     }
     va_end(ap);
     return p;
@@ -200,28 +200,28 @@ void addInterCodes(InterCodesPtr p)
 }
 
 // VarDec → ID | VarDec LB INT RB
-void translateVarDec(Node *node, OperandPtr op, bool isParam)
+void translateVarDec(Node* node, OperandPtr op, bool isParam)
 {
     assert(strEqual(node->unitName, "VarDec"));
-    Node *first = node->child;
+    Node* first = node->child;
     if (strEqual(first->unitName, "ID"))
     {
         // 根据类型进行判断
-        Symbol *sym = getTableSymbol(first->val.str, TYPE_CANNOT_DUP);
+        Symbol* sym = getTableSymbol(first->val.str, TYPE_CANNOT_DUP);
         switch (sym->type->kind)
         {
         case TYPE_BASIC:
-            if (op != NULL) // 有初始值变量或者是形参
-            {
-                setOpName(op, mystrdup(first->val.str));
-            }
-            break;
+        if (op != NULL) // 有初始值变量或者是形参
+        {
+            setOpName(op, mystrdup(first->val.str));
+        }
+        break;
         case TYPE_ARRAY: // 需要分配空间
         {
             if (isParam) // 是形参,op!=NULL,应该报错并退出
             {
                 printf(RED "Cannot translate: Code contains variables of multi-dimensional array type or "
-                           " parameters of array type.\n" NORMAL);
+                    " parameters of array type.\n" NORMAL);
                 exit(0);
                 // setOpName(op, mystrdup(first->val.str));
             }
@@ -230,7 +230,7 @@ void translateVarDec(Node *node, OperandPtr op, bool isParam)
                 if (sym->type->t.array.elem->kind == TYPE_ARRAY) // 多维数组,应该报错
                 {
                     printf(RED "Cannot translate: Code contains variables of multi-dimensional array type or "
-                               " parameters of array type.\n" NORMAL);
+                        " parameters of array type.\n" NORMAL);
                     exit(0);
                 }
                 OperandPtr arr = newOperand(OP_VARIABLE, mystrdup(first->val.str));
@@ -264,10 +264,10 @@ void translateVarDec(Node *node, OperandPtr op, bool isParam)
 }
 
 // ParamDec → Specifier VarDec
-void translateParamDec(Node *node)
+void translateParamDec(Node* node)
 {
     assert(strEqual(node->unitName, "ParamDec"));
-    Node *second = node->child->sibling;
+    Node* second = node->child->sibling;
     OperandPtr op = newOperand(OP_VARIABLE, NULL);
     translateVarDec(second, op, true);
     InterCodePtr code = newInterCode(IR_PARAM, op);
@@ -277,7 +277,7 @@ void translateParamDec(Node *node)
 
 // VarList → ParamDec COMMA VarList
 //         | ParamDec
-void translateVarList(Node *node)
+void translateVarList(Node* node)
 {
     assert(strEqual(node->unitName, "VarList"));
     translateParamDec(node->child);
@@ -290,10 +290,10 @@ void translateVarList(Node *node)
 
 // FunDec -> ID LP VarList RP
 //         | ID LP RP
-void translateFunDec(Node *node) // 函数名的标识符以及由一对圆括号括起来的一个形参列表
+void translateFunDec(Node* node) // 函数名的标识符以及由一对圆括号括起来的一个形参列表
 {
     assert(strEqual(node->unitName, "FunDec"));
-    Node *first = node->child, *third = first->sibling->sibling;
+    Node* first = node->child, * third = first->sibling->sibling;
     OperandPtr op = newOperand(OP_FUNCTION, mystrdup(first->val.str));
     InterCodePtr code = newInterCode(IR_FUNCTION, op);
     InterCodesPtr codes = newInterCodes(code);
@@ -304,10 +304,10 @@ void translateFunDec(Node *node) // 函数名的标识符以及由一对圆括�
     }
 }
 
-void translate_Cond(Node *node, OperandPtr label_true, OperandPtr label_false)
+void translate_Cond(Node* node, OperandPtr label_true, OperandPtr label_false)
 {
     assert(strEqual(node->unitName, "Exp"));
-    Node *first = node->child, *second = first->sibling;
+    Node* first = node->child, * second = first->sibling;
     if (strEqual(first->unitName, "NOT"))
     {
         translate_Cond(second, label_false, label_true);
@@ -315,7 +315,7 @@ void translate_Cond(Node *node, OperandPtr label_true, OperandPtr label_false)
     }
     else if (second != NULL)
     {
-        Node *third = second->sibling;
+        Node* third = second->sibling;
         if (strEqual(second->unitName, "RELOP"))
         {
             /*
@@ -369,7 +369,7 @@ void translate_Cond(Node *node, OperandPtr label_true, OperandPtr label_false)
 }
 
 // Args → Exp COMMA Args | Exp
-void translateArgs(Node *node, ArgListPtr args)
+void translateArgs(Node* node, ArgListPtr args)
 {
     /*
     t1 = new_temp()
@@ -377,7 +377,7 @@ void translateArgs(Node *node, ArgListPtr args)
     arg_list = t1 + arg_list
     return code1
     */
-    Node *first = node->child;
+    Node* first = node->child;
 
     OperandPtr t1 = newTemp();
     translateExp(first, t1);
@@ -419,16 +419,16 @@ Exp →
     | INT
     | FLOAT
 */
-Symbol *translateExp(Node *node, OperandPtr place)
+Symbol* translateExp(Node* node, OperandPtr place)
 {
     assert(strEqual(node->unitName, "Exp"));
-    Node *first = node->child, *second = first->sibling;
-    char *firstname = first->unitName;
+    Node* first = node->child, * second = first->sibling;
+    char* firstname = first->unitName;
     if (second == NULL)
     {
         if (strEqual(firstname, "ID"))
         {
-            Symbol *sym = getTableSymbol(first->val.str, TYPE_CANNOT_DUP);
+            Symbol* sym = getTableSymbol(first->val.str, TYPE_CANNOT_DUP);
             if (sym->type->kind == TYPE_STRUCTURE || sym->type->kind == TYPE_ARRAY)
             {
                 setOpKind(place, OP_STRUCT_ARR_ID);
@@ -455,14 +455,14 @@ Symbol *translateExp(Node *node, OperandPtr place)
     }
     else
     {
-        char *secondname = second->unitName;
-        Node *third = second->sibling;
-        char *thirdname = NULL;
+        char* secondname = second->unitName;
+        Node* third = second->sibling;
+        char* thirdname = NULL;
         if (third)
             thirdname = third->unitName;
         if (strEqual(first->unitName, "ID") && strEqual(second->unitName, "LP"))
         {
-            Symbol *funcname = getTableSymbol(first->val.str, TYPE_FUNCTION);
+            Symbol* funcname = getTableSymbol(first->val.str, TYPE_FUNCTION);
             assert(funcname != NULL);
 
             if (strEqual(funcname->name, "read"))
@@ -514,9 +514,9 @@ Symbol *translateExp(Node *node, OperandPtr place)
         else if (strEqual(secondname, "ASSIGNOP"))
         {
             OperandPtr left = newTemp();
-            Symbol *lhs = translateExp(first, left);
+            Symbol* lhs = translateExp(first, left);
             OperandPtr right = newTemp();
-            Symbol *rhs = translateExp(second->sibling, right);
+            Symbol* rhs = translateExp(second->sibling, right);
             int type = IR_ASSIGN, retType = IR_ASSIGN;
             if (left->kind == OP_ADDRESS && right->kind != OP_ADDRESS)
             {
@@ -579,7 +579,7 @@ Symbol *translateExp(Node *node, OperandPtr place)
         }
         else if (strEqual(secondname, "PLUS") || strEqual(secondname, "MINUS") || strEqual(secondname, "STAR") || strEqual(secondname, "DIV"))
         {
-            Node *third = second->sibling;
+            Node* third = second->sibling;
             OperandPtr lhs = newTemp();
             translateExp(first, lhs);
 
@@ -590,20 +590,20 @@ Symbol *translateExp(Node *node, OperandPtr place)
             switch (secondname[0])
             {
             case 'P':
-                code = newInterCode(IR_ADD, place, lhs, rhs);
-                break;
+            code = newInterCode(IR_ADD, place, lhs, rhs);
+            break;
             case 'M':
-                code = newInterCode(IR_SUB, place, lhs, rhs);
-                break;
+            code = newInterCode(IR_SUB, place, lhs, rhs);
+            break;
             case 'S':
-                code = newInterCode(IR_MUL, place, lhs, rhs);
-                break;
+            code = newInterCode(IR_MUL, place, lhs, rhs);
+            break;
             case 'D':
-                code = newInterCode(IR_DIV, place, lhs, rhs);
-                break;
+            code = newInterCode(IR_DIV, place, lhs, rhs);
+            break;
             default:
-                assert(0);
-                break;
+            assert(0);
+            break;
             }
             InterCodesPtr codes = newInterCodes(code);
             addInterCodes(codes);
@@ -620,7 +620,7 @@ Symbol *translateExp(Node *node, OperandPtr place)
             */
             OperandPtr label1 = newLabel(), label2 = newLabel();
             OperandPtr zero = newOperand(OP_CONSTANT, NULL);
-            OperandPtr one = newOperand(OP_CONSTANT, (char *)1);
+            OperandPtr one = newOperand(OP_CONSTANT, (char*)1);
             addInterCodes(newInterCodes(newInterCode(IR_ASSIGN, place, zero)));
             translate_Cond(node, label1, label2);
             addInterCodes(newInterCodes(newInterCode(IR_LABEL, label1)));
@@ -630,7 +630,7 @@ Symbol *translateExp(Node *node, OperandPtr place)
         else if (strEqual(secondname, "DOT")) // Exp DOT ID
         {
             OperandPtr base = newTemp(), baseaddr;
-            Symbol *location = translateExp(first, base);
+            Symbol* location = translateExp(first, base);
             if (base->kind != OP_ADDRESS)
             {
                 baseaddr = newTemp();
@@ -642,7 +642,7 @@ Symbol *translateExp(Node *node, OperandPtr place)
                 setOpKind(baseaddr, OP_VARIABLE);
             }
 
-            Symbol *target;
+            Symbol* target;
             int offset = getStructEleOffset(location, third->val.str, &target); // 得到在结构体中的偏移量
             OperandPtr off = newOperand(OP_CONSTANT, int2cptr(offset));
             if (target->type->kind == TYPE_BASIC)
@@ -656,11 +656,11 @@ Symbol *translateExp(Node *node, OperandPtr place)
         else if (strEqual(secondname, "LB")) // Exp LB Exp RB,数组元素,仅支持一维数组
         {
             OperandPtr base = newTemp(), baseaddr;
-            Symbol *location = translateExp(first, base); // 得到基地址
+            Symbol* location = translateExp(first, base); // 得到基地址
             if (location == NULL)
             {
                 printf(RED "Cannot translate: Code contains variables of multi - dimensional array type "
-                           "or parameters of array type.\n" NORMAL);
+                    "or parameters of array type.\n" NORMAL);
                 exit(0);
             }
             if (base->kind != OP_ADDRESS)
@@ -685,15 +685,15 @@ Symbol *translateExp(Node *node, OperandPtr place)
 
             setOpKind(place, OP_ADDRESS);
             addInterCodes(newInterCodes(newInterCode(IR_ADD, place, baseaddr, offset)));
-            Type *t = location->type->t.array.elem;
+            Type* t = location->type->t.array.elem;
             switch (t->kind)
             {
             case TYPE_STRUCTURE:
-                return t->t.structure;
-                break;
+            return t->t.structure;
+            break;
             case TYPE_BASIC:
-                place->isBasicAddr = true;
-                break;
+            place->isBasicAddr = true;
+            break;
             default:;
                 break;
             }
@@ -707,16 +707,16 @@ Symbol *translateExp(Node *node, OperandPtr place)
 }
 
 // Dec → VarDec | VarDec ASSIGNOP Exp
-void translateDec(Node *node)
+void translateDec(Node* node)
 {
-    Node *first = node->child, *second = first->sibling;
+    Node* first = node->child, * second = first->sibling;
     if (second == NULL)
     {
         translateVarDec(first, NULL, false);
     }
     else
     {
-        Node *third = second->sibling;
+        Node* third = second->sibling;
         OperandPtr left = newOperand(OP_VARIABLE, NULL);
         translateVarDec(first, left, false);
         OperandPtr right = newTemp();
@@ -728,10 +728,10 @@ void translateDec(Node *node)
 }
 
 // DecList → Dec | Dec COMMA DecList
-void translateDecList(Node *node)
+void translateDecList(Node* node)
 {
     assert(strEqual(node->unitName, "DecList"));
-    Node *first = node->child;
+    Node* first = node->child;
     translateDec(first);
     while (first->sibling != NULL)
     {
@@ -742,18 +742,18 @@ void translateDecList(Node *node)
 
 // 每个Def就是一条变量定义，它包括一个类型描述符Specifier以及一个DecList
 // Def → Specifier DecList SEMI
-void translateDef(Node *node)
+void translateDef(Node* node)
 {
     assert(strEqual(node->unitName, "Def"));
-    Node *second = node->child->sibling;
+    Node* second = node->child->sibling;
     translateDecList(second);
 }
 
 // DefList → Def DefList | 空
-void translateDefList(Node *node)
+void translateDefList(Node* node)
 {
     assert(strEqual(node->unitName, "DefList"));
-    Node *first = node->child;
+    Node* first = node->child;
     translateDef(first);
     while (first->sibling != NULL)
     {
@@ -768,10 +768,10 @@ void translateDefList(Node *node)
 //  | IF LP Exp RP Stmt
 //  | IF LP Exp RP Stmt ELSE Stmt
 //  | WHILE LP Exp RP Stmt
-void translateStmt(Node *node)
+void translateStmt(Node* node)
 {
     assert(strEqual(node->unitName, "Stmt"));
-    Node *first = node->child;
+    Node* first = node->child;
     if (strEqual(first->unitName, "CompSt"))
     {
         translateCompSt(first);
@@ -791,7 +791,7 @@ void translateStmt(Node *node)
     }
     else if (strEqual(first->unitName, "IF"))
     {
-        Node *five = first->sibling->sibling->sibling->sibling;
+        Node* five = first->sibling->sibling->sibling->sibling;
 
         OperandPtr label1 = newLabel();
         OperandPtr label2 = newLabel();
@@ -835,7 +835,7 @@ void translateStmt(Node *node)
         + [GOTO label1] + [LABEL label3]
         */
         OperandPtr label1 = newLabel(), label2 = newLabel(), label3 = newLabel();
-        Node *Exp = first->sibling->sibling;
+        Node* Exp = first->sibling->sibling;
         addInterCodes(newInterCodes(newInterCode(IR_LABEL, label1)));
         translate_Cond(Exp, label2, label3);
         addInterCodes(newInterCodes(newInterCode(IR_LABEL, label2)));
@@ -846,10 +846,10 @@ void translateStmt(Node *node)
 }
 
 // StmtList → Stmt StmtList| null
-void translateStmtList(Node *node)
+void translateStmtList(Node* node)
 {
     assert(strEqual(node->unitName, "StmtList"));
-    Node *first = node->child;
+    Node* first = node->child;
     translateStmt(first);
     while (first->sibling != NULL)
     {
@@ -859,10 +859,10 @@ void translateStmtList(Node *node)
 }
 
 // CompSt → LC DefList StmtList RC
-void translateCompSt(Node *node)
+void translateCompSt(Node* node)
 {
     assert(strEqual(node->unitName, "CompSt"));
-    Node *second = node->child->sibling, *third = second->sibling;
+    Node* second = node->child->sibling, * third = second->sibling;
     if (strEqual(second->unitName, "DefList"))
     {
         translateDefList(second);
@@ -875,11 +875,11 @@ void translateCompSt(Node *node)
     }
 }
 
-void translateExtDef(Node *node)
+void translateExtDef(Node* node)
 {
     // 不需要处理全局变量和结构体定义,没有全局变量,只需要翻译函数
     assert(strEqual(node->unitName, "ExtDef"));
-    Node *secondchild = node->child->sibling;
+    Node* secondchild = node->child->sibling;
     if (strEqual(secondchild->unitName, "FunDec")) // function definition
     {
         translateFunDec(secondchild);
@@ -887,10 +887,10 @@ void translateExtDef(Node *node)
     }
 }
 
-void translateExtDefList(Node *node)
+void translateExtDefList(Node* node)
 {
     assert(strEqual(node->unitName, "ExtDefList"));
-    for (Node *q = node->child; q != NULL; q = q->sibling)
+    for (Node* q = node->child; q != NULL; q = q->sibling)
     {
         if (strEqual(q->unitName, "ExtDef"))
         {
@@ -912,23 +912,24 @@ void genInterCodes()
     }
 }
 
-void printOp(FILE *output, OperandPtr op)
+void printOp(FILE* output, OperandPtr op)
 {
     switch (op->kind)
     {
     case OP_CONSTANT:
-        fprintf(output, "#%d", op->u.value);
-        break;
+    fprintf(output, "#%d", op->u.value);
+    break;
     case OP_LABEL:
-        fprintf(output, "label%d", op->u.value);
-        break;
+    fprintf(output, "label%d", op->u.value);
+    break;
+    case OP_TEMP:
     case OP_STRUCT_ARR_ID:
     case OP_ADDRESS:
     case OP_VARIABLE:
     case OP_FUNCTION:
     case OP_RELOP:
-        fprintf(output, "%s", op->u.name);
-        break;
+    fprintf(output, "%s", op->u.name);
+    break;
     }
 }
 
@@ -982,174 +983,174 @@ OperandPtr getGotoResult(InterCodePtr code)
     return code->u.ifgoto.result;
 }
 
-void printInterCode(FILE *output, InterCodePtr p)
+void printInterCode(FILE* output, InterCodePtr p)
 {
     switch (p->kind)
     {
     case IR_FUNCTION:
-        fprintf(output, "FUNCTION ");
-        printOp(output, p->u.oneop.op);
-        fprintf(output, " :");
-        break;
+    fprintf(output, "FUNCTION ");
+    printOp(output, p->u.oneop.op);
+    fprintf(output, " :");
+    break;
 
     case IR_PARAM:
-        fprintf(output, "PARAM ");
-        printOp(output, p->u.oneop.op);
-        break;
+    fprintf(output, "PARAM ");
+    printOp(output, p->u.oneop.op);
+    break;
 
     case IR_DEC:
-        fprintf(output, "DEC %s %d", p->u.dec.varName->u.name, p->u.dec.size);
-        break;
+    fprintf(output, "DEC %s %d", p->u.dec.varName->u.name, p->u.dec.size);
+    break;
 
     case IR_ASSIGN:
-        if (p->u.assign.left == NULL)
-            return;
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := ");
-        printOp(output, p->u.assign.right);
-        break;
+    if (p->u.assign.left == NULL)
+        return;
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := ");
+    printOp(output, p->u.assign.right);
+    break;
 
     case IR_GET_ADDR: // 将地址赋给临时变量
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := ");
-        if (p->u.assign.right->isArg == false)
-            fprintf(output, "&");
-        printOp(output, p->u.assign.right);
-        break;
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := ");
+    if (p->u.assign.right->isArg == false)
+        fprintf(output, "&");
+    printOp(output, p->u.assign.right);
+    break;
 
     case IR_READ_ADDR:
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := *");
-        printOp(output, p->u.assign.right);
-        break;
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := *");
+    printOp(output, p->u.assign.right);
+    break;
 
     case IR_WRITE_ADDR:
-        fprintf(output, "*");
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := ");
-        printOp(output, p->u.assign.right);
-        break;
+    fprintf(output, "*");
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := ");
+    printOp(output, p->u.assign.right);
+    break;
 
     case IR_READ_WRITE_ADDR:
-        fprintf(output, "*");
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := *");
-        printOp(output, p->u.assign.right);
-        break;
+    fprintf(output, "*");
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := *");
+    printOp(output, p->u.assign.right);
+    break;
 
     case IR_ADD:
     case IR_SUB:
     case IR_MUL:
     case IR_DIV:
-        if (p->u.binop.result == NULL)
-            return;
-        printOp(output, p->u.binop.result);
-        fprintf(output, " := ");
-        if (p->u.binop.left->kind == OP_ADDRESS)
+    if (p->u.binop.result == NULL)
+        return;
+    printOp(output, p->u.binop.result);
+    fprintf(output, " := ");
+    if (p->u.binop.left->kind == OP_ADDRESS)
+    {
+        fprintf(output, "*");
+    }
+    printOp(output, p->u.binop.left);
+    {
+        switch (p->kind)
         {
-            fprintf(output, "*");
-        }
-        printOp(output, p->u.binop.left);
-        {
-            switch (p->kind)
-            {
-            case IR_ADD:
-                fprintf(output, " + ");
-                break;
-            case IR_SUB:
-                fprintf(output, " - ");
-                break;
-            case IR_MUL:
-                fprintf(output, " * ");
-                break;
-            case IR_DIV:
-                fprintf(output, " / ");
-                break;
-            default:
-                break;
-            }
-        }
-        if (p->u.binop.right->kind == OP_ADDRESS)
-        {
-            fprintf(output, "*");
-        }
-        printOp(output, p->u.binop.right);
+        case IR_ADD:
+        fprintf(output, " + ");
         break;
+        case IR_SUB:
+        fprintf(output, " - ");
+        break;
+        case IR_MUL:
+        fprintf(output, " * ");
+        break;
+        case IR_DIV:
+        fprintf(output, " / ");
+        break;
+        default:
+        break;
+        }
+    }
+    if (p->u.binop.right->kind == OP_ADDRESS)
+    {
+        fprintf(output, "*");
+    }
+    printOp(output, p->u.binop.right);
+    break;
 
     case IR_RETURN:
-        fprintf(output, "RETURN ");
-        if (p->u.oneop.op->kind == OP_ADDRESS)
-            fprintf(output, "*");
-        printOp(output, p->u.oneop.op);
-        break;
+    fprintf(output, "RETURN ");
+    if (p->u.oneop.op->kind == OP_ADDRESS)
+        fprintf(output, "*");
+    printOp(output, p->u.oneop.op);
+    break;
 
     case IR_GOTO:
-        fprintf(output, "GOTO ");
-        printOp(output, p->u.oneop.op);
-        break;
+    fprintf(output, "GOTO ");
+    printOp(output, p->u.oneop.op);
+    break;
 
     case IR_LABEL:
-        fprintf(output, "LABEL ");
-        printOp(output, p->u.oneop.op);
-        fprintf(output, " :");
-        break;
+    fprintf(output, "LABEL ");
+    printOp(output, p->u.oneop.op);
+    fprintf(output, " :");
+    break;
 
     case IR_IF_GOTO:
-        fprintf(output, "IF ");
-        if (p->u.ifgoto.left->kind == OP_ADDRESS)
-        {
-            fprintf(output, "*");
-        }
-        printOp(output, p->u.ifgoto.left);
-        fprintf(output, " ");
-        printOp(output, p->u.ifgoto.op);
-        fprintf(output, " ");
-        if (p->u.ifgoto.right->kind == OP_ADDRESS)
-        {
-            fprintf(output, "*");
-        }
-        printOp(output, p->u.ifgoto.right);
-        fprintf(output, " ");
-        fprintf(output, "GOTO ");
-        printOp(output, p->u.ifgoto.result);
-        break;
+    fprintf(output, "IF ");
+    if (p->u.ifgoto.left->kind == OP_ADDRESS)
+    {
+        fprintf(output, "*");
+    }
+    printOp(output, p->u.ifgoto.left);
+    fprintf(output, " ");
+    printOp(output, p->u.ifgoto.op);
+    fprintf(output, " ");
+    if (p->u.ifgoto.right->kind == OP_ADDRESS)
+    {
+        fprintf(output, "*");
+    }
+    printOp(output, p->u.ifgoto.right);
+    fprintf(output, " ");
+    fprintf(output, "GOTO ");
+    printOp(output, p->u.ifgoto.result);
+    break;
 
     case IR_READ:
-        fprintf(output, "READ ");
-        printOp(output, p->u.oneop.op);
-        break;
+    fprintf(output, "READ ");
+    printOp(output, p->u.oneop.op);
+    break;
 
     case IR_WRITE:
-        fprintf(output, "WRITE ");
-        if (p->u.oneop.op->kind == OP_ADDRESS)
-            fprintf(output, "*");
-        printOp(output, p->u.oneop.op);
-        break;
+    fprintf(output, "WRITE ");
+    if (p->u.oneop.op->kind == OP_ADDRESS)
+        fprintf(output, "*");
+    printOp(output, p->u.oneop.op);
+    break;
     case IR_CALL:
-        if (p->u.assign.left->kind == OP_ADDRESS)
-            fprintf(output, "*");
-        printOp(output, p->u.assign.left);
-        fprintf(output, " := CALL ");
-        printOp(output, p->u.assign.right);
-        break;
+    if (p->u.assign.left->kind == OP_ADDRESS)
+        fprintf(output, "*");
+    printOp(output, p->u.assign.left);
+    fprintf(output, " := CALL ");
+    printOp(output, p->u.assign.right);
+    break;
 
     case IR_ARG:
-        fprintf(output, "ARG ");
-        if (p->u.oneop.op->kind == OP_STRUCT_ARR_ID)
-            fprintf(output, "&");
-        else if (p->u.oneop.op->kind == OP_ADDRESS && p->u.oneop.op->isBasicAddr)
-            fprintf(output, "*");
-        printOp(output, p->u.oneop.op);
-        break;
+    fprintf(output, "ARG ");
+    if (p->u.oneop.op->kind == OP_STRUCT_ARR_ID)
+        fprintf(output, "&");
+    else if (p->u.oneop.op->kind == OP_ADDRESS && p->u.oneop.op->isBasicAddr)
+        fprintf(output, "*");
+    printOp(output, p->u.oneop.op);
+    break;
     default:
-        fprintf(stderr, RED "code type is %d\n" NORMAL, p->kind);
-        assert(0);
-        break;
+    fprintf(stderr, RED "code type is %d\n" NORMAL, p->kind);
+    assert(0);
+    break;
     }
     fprintf(output, "\n");
 }
 
-void printInterCodes(FILE *output)
+void printInterCodes(FILE* output)
 {
     InterCodesPtr p = list.dummyHead->next;
     while (p != list.dummyHead)
