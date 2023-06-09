@@ -1,3 +1,4 @@
+#include"symbolTable.h"
 #include "objectCode.h"
 #include <stdlib.h>
 #include <string.h>
@@ -12,11 +13,7 @@ static VarPtr varList;
 
 static Register regs[REG_NUM];
 
-int curReg = MIN_AVAIL_REG;
 int spOffset = 0;
-int curParam = 0;
-int curArg = 0;
-const int stackSize = 100;
 const int NAME_LEN = 64;
 
 char* getBuf(int size)
@@ -25,7 +22,7 @@ char* getBuf(int size)
     return buf;
 }
 
-ObjectCodePtr newObjectCode(OC_Kind k, ...)
+ObjectCodePtr newObjectCode(ASM_Kind k, ...)
 {
     ObjectCodePtr p = (ObjectCodePtr)malloc(sizeof(ObjectCode));
     p->kind = k;
@@ -34,114 +31,124 @@ ObjectCodePtr newObjectCode(OC_Kind k, ...)
     switch (k)
     {
 
-    case OC_MOVE:
+    case ASM_MOVE:
     p->move.regx = va_arg(ap, int);
     p->move.regy = va_arg(ap, int);
     break;
 
-    case OC_FUNC:
+    case ASM_FUNC:
     p->func.funcname = va_arg(ap, char*);
     break;
 
-    case OC_LABEL:
+    case ASM_LABEL:
     p->label.x = va_arg(ap, int);
     break;
 
-    case OC_LI:
+    case ASM_LI:
     p->li.reg = va_arg(ap, int);
     p->li.imm = va_arg(ap, int);
     break;
 
-    case OC_ADD:
+    case ASM_ADD:
     p->add.regx = va_arg(ap, int);
     p->add.regy = va_arg(ap, int);
     p->add.regz = va_arg(ap, int);
     break;
 
-    case OC_SUB:
+    case ASM_ADDI:
+    p->addi.regx = va_arg(ap, int);
+    p->addi.regy = va_arg(ap, int);
+    p->addi.imm = va_arg(ap, int);
+    break;
+
+    case ASM_SUB:
     p->sub.regx = va_arg(ap, int);
     p->sub.regy = va_arg(ap, int);
     p->sub.regz = va_arg(ap, int);
     break;
 
-    case OC_MUL:
+    case ASM_MUL:
     p->mul.regx = va_arg(ap, int);
     p->mul.regy = va_arg(ap, int);
     p->mul.regz = va_arg(ap, int);
     break;
 
-    case OC_DIV:
+    case ASM_DIV:
     p->div.regy = va_arg(ap, int);
     p->div.regz = va_arg(ap, int);
     break;
 
-    case OC_SW:
+    case ASM_SW:
     p->sw.regy = va_arg(ap, int);
     p->sw.offset = va_arg(ap, int);
     p->sw.regx = va_arg(ap, int);
     break;
 
-    case OC_LW:
+    case ASM_LW:
     p->lw.regx = va_arg(ap, int);
     p->lw.offset = va_arg(ap, int);
     p->lw.regy = va_arg(ap, int);
     break;
 
-    case OC_J:
+    case ASM_J:
     p->j.label = va_arg(ap, int);
     break;
 
-    case OC_MFLO:
+    case ASM_MFLO:
     p->mflo.regx = va_arg(ap, int);
     break;
 
-    case OC_JAL:
+    case ASM_JAL:
     p->jal.f = va_arg(ap, char*);
     break;
 
-    case OC_BEQ:
+    case ASM_BEQ:
     p->beq.regx = va_arg(ap, int);
     p->beq.regy = va_arg(ap, int);
     p->beq.z = va_arg(ap, int);
     break;
 
-    case OC_BNE:
+    case ASM_BNE:
     p->bne.regx = va_arg(ap, int);
     p->bne.regy = va_arg(ap, int);
     p->bne.z = va_arg(ap, int);
     break;
 
-    case OC_BGT:
+    case ASM_BGT:
     p->bgt.regx = va_arg(ap, int);
     p->bgt.regy = va_arg(ap, int);
     p->bgt.z = va_arg(ap, int);
     break;
 
-    case OC_BLT:
+    case ASM_BLT:
     p->blt.regx = va_arg(ap, int);
     p->blt.regy = va_arg(ap, int);
     p->blt.z = va_arg(ap, int);
     break;
 
-    case OC_BGE:
+    case ASM_BGE:
     p->bge.regx = va_arg(ap, int);
     p->bge.regy = va_arg(ap, int);
     p->bge.z = va_arg(ap, int);
     break;
 
-    case OC_BLE:
+    case ASM_BLE:
     p->ble.regx = va_arg(ap, int);
     p->ble.regy = va_arg(ap, int);
     p->ble.z = va_arg(ap, int);
     break;
 
-    case OC_LA:
+    case ASM_LA:
     p->la.reg = va_arg(ap, int);
     p->la.name = va_arg(ap, char*);
     break;
 
+    case ASM_JR:
+    case ASM_NONE:
+    break;
+
     default:
-    ;
+    assert(0);
     break;
     }
     va_end(ap);
@@ -274,7 +281,7 @@ void initRegs()
 
 void lwVar2Reg(int index, VarPtr var)
 {
-    ObjectCodePtr ptr = newObjectCode(OC_LW, index, var->offset, REG_FP);
+    ObjectCodePtr ptr = newObjectCode(ASM_LW, index, var->offset, REG_FP);
     addObjectCode(ocHead, ptr);
 }
 
@@ -310,7 +317,7 @@ void swReg2Mem(int regIdx)
 {
     VarPtr var = regs[regIdx].var;
     var->reg = REG_ZERO;
-    ObjectCodePtr ptr = newObjectCode(OC_SW, regIdx, var->offset, REG_FP);
+    ObjectCodePtr ptr = newObjectCode(ASM_SW, regIdx, var->offset, REG_FP);
     addObjectCode(ocHead, ptr);
 }
 
@@ -360,7 +367,7 @@ int getReg(OperandPtr p)
     }
     else
     {
-        ObjectCodePtr ptr = newObjectCode(OC_LI, target, p->u.value);
+        ObjectCodePtr ptr = newObjectCode(ASM_LI, target, p->u.value);
         addObjectCode(ocHead, ptr);
     }
     regs[target].type = p->kind;
@@ -385,6 +392,89 @@ void resetRegs(int regx, int regy, int regz)
     resetReg(regz);
 }
 
+void pop2Reg(int idx)
+{
+    /*
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    */
+    ObjectCodePtr ptr = newObjectCode(ASM_LW, idx, 0, REG_SP);
+    addObjectCode(ocHead, ptr);
+    ptr = newObjectCode(ASM_ADDI, REG_SP, REG_SP, 4);
+    addObjectCode(ocHead, ptr);
+}
+
+void pushReg(int idx)//push ebp(fp)
+{
+    ObjectCodePtr ptr = newObjectCode(ASM_ADDI, REG_SP, REG_SP, -4);
+    addObjectCode(ocHead, ptr);
+    ptr = newObjectCode(ASM_SW, idx, 0, REG_SP);
+    addObjectCode(ocHead, ptr);
+}
+
+void moveDestFromSrc(int dest, int src)//move esp to ebp(fp)
+{
+    ObjectCodePtr ptr = newObjectCode(ASM_MOVE, dest, src);
+    addObjectCode(ocHead, ptr);
+}
+
+void asmFunc(InterCodePtr p)
+{
+    ObjectCodePtr ptr = newObjectCode(ASM_FUNC, mystrdup(p->u.oneop.op->u.name));
+    addObjectCode(ocHead, ptr);
+    //move esp ebp
+    pushReg(REG_FP);
+    moveDestFromSrc(REG_FP, REG_SP);
+}
+
+void pushArg(OperandPtr p)
+{
+    // fprintf(output, "ARG ");
+    // if (p->u.oneop.op->kind == OP_STRUCT_ARR_ID)
+    //     fprintf(output, "&");
+    // else if (p->u.oneop.op->kind == OP_ADDRESS && p->u.oneop.op->isBasicAddr)
+    //     fprintf(output, "*");
+    // printOp(output, p->u.oneop.op);
+    int reg = getReg(p);
+    pushReg(reg);
+}
+
+void asmCall(InterCodePtr p) //x := Call f
+{
+    OperandPtr leftOp = p->u.assign.left, rightOp = p->u.assign.right;
+    //将返回地址压栈
+    pushReg(REG_RA);
+
+    ObjectCodePtr  ptr = newObjectCode(ASM_JAL, mystrdup(rightOp->u.name));
+    addObjectCode(ocHead, ptr);
+
+    //TODO:把参数恢复
+
+    //把返回地址恢复
+    pop2Reg(REG_RA);
+
+    int regx = getReg(leftOp);
+    ptr = newObjectCode(ASM_MOVE, regx, REG_V0);
+    addObjectCode(ocHead, ptr);
+    if (leftOp->kind == OP_ADDRESS)
+    {
+        swReg2Mem(regx);
+    }
+}
+
+void asmReturn(InterCodePtr p)
+{
+    int regx = getReg(p->u.oneop.op);
+
+    ObjectCodePtr ptr = newObjectCode(ASM_MOVE, REG_V0, regx);
+    addObjectCode(ocHead, ptr);
+    moveDestFromSrc(REG_SP, REG_FP);
+    pop2Reg(REG_FP);
+
+    ptr = newObjectCode(ASM_JR);
+    addObjectCode(ocHead, ptr);
+}
+
 void genObjectCode(InterCodePtr p)
 {
     ObjectCodePtr ptr = NULL;
@@ -395,22 +485,21 @@ void genObjectCode(InterCodePtr p)
     switch (p->kind)
     {
     case IR_FUNCTION:
-    ptr = newObjectCode(OC_FUNC, mystrdup(p->u.oneop.op->u.name));
-    addObjectCode(ocHead, ptr);
+    asmFunc(p);
     break;
 
     case IR_LABEL:
-    ptr = newObjectCode(OC_LABEL, p->u.oneop.op->u.value);
+    ptr = newObjectCode(ASM_LABEL, p->u.oneop.op->u.value);
     addObjectCode(ocHead, ptr);
     break;
 
-    case IR_PARAM://TODO:
+    case IR_PARAM:
     // fprintf(output, "PARAM ");
     // printOp(output, getOneOpOp(p));
     break;
 
-    case IR_DEC://TODO:
-    // fprintf(output, "DEC %s %d", p->u.dec.varName->u.name, p->u.dec.size);
+    case IR_DEC:
+    addObjectCode(ocHead, newObjectCode(ASM_ADDI, REG_SP, REG_SP, -p->u.dec.size));
     break;
 
     case IR_ASSIGN:
@@ -419,14 +508,14 @@ void genObjectCode(InterCodePtr p)
     if (rightOp->kind == OP_IMM)//x := k
     {
         regx = getReg(leftOp);
-        ptr = newObjectCode(OC_LI, regx, rightOp->u.value);
+        ptr = newObjectCode(ASM_LI, regx, rightOp->u.value);
         addObjectCode(ocHead, ptr);
     }
     else                                       //x := y
     {
         regx = getReg(leftOp);
         regy = getReg(rightOp);
-        ptr = newObjectCode(OC_MOVE, regx, regy);
+        ptr = newObjectCode(ASM_MOVE, regx, regy);
         addObjectCode(ocHead, ptr);
     }
     break;
@@ -435,7 +524,7 @@ void genObjectCode(InterCodePtr p)
     leftOp = p->u.assign.left;
     rightOp = p->u.assign.right;
     regx = getReg(leftOp);
-    ptr = newObjectCode(OC_LA, regx, rightOp->u.name);
+    ptr = newObjectCode(ASM_LA, regx, rightOp->u.name);
     addObjectCode(ocHead, ptr);
     break;
 
@@ -444,7 +533,7 @@ void genObjectCode(InterCodePtr p)
     rightOp = p->u.assign.right;
     regx = getReg(leftOp);
     regy = getReg(rightOp);
-    ptr = newObjectCode(OC_LW, regx, offset, regy);
+    ptr = newObjectCode(ASM_LW, regx, offset, regy);
     addObjectCode(ocHead, ptr);
     break;
 
@@ -455,10 +544,10 @@ void genObjectCode(InterCodePtr p)
     regy = getReg(rightOp);
     if (rightOp->kind == OP_IMM)//*x := k
     {
-        ptr = newObjectCode(OC_LI, regy, rightOp->u.value);
+        ptr = newObjectCode(ASM_LI, regy, rightOp->u.value);
         addObjectCode(ocHead, ptr);
     }
-    ptr = newObjectCode(OC_SW, regy, offset, regx);
+    ptr = newObjectCode(ASM_SW, regy, offset, regx);
     addObjectCode(ocHead, ptr);
     break;
 
@@ -467,11 +556,11 @@ void genObjectCode(InterCodePtr p)
     rightOp = p->u.assign.right;
     regx = getReg(rightOp);
     regy = getReg(NULL);//regy存放y的值
-    ptr = newObjectCode(OC_LW, regy, offset, regx);
+    ptr = newObjectCode(ASM_LW, regy, offset, regx);
     addObjectCode(ocHead, ptr);
 
     regx = getReg(leftOp);
-    ptr = newObjectCode(OC_SW, regy, offset, regx);
+    ptr = newObjectCode(ASM_SW, regy, offset, regx);
     addObjectCode(ocHead, ptr);
     break;
 
@@ -485,13 +574,13 @@ void genObjectCode(InterCodePtr p)
     regy = getReg(leftOp);
     if (right == OP_IMM)
     {
-        ptr = newObjectCode(OC_ADDI, regx, regy, rightOp->u.value);
+        ptr = newObjectCode(ASM_ADDI, regx, regy, rightOp->u.value);
         addObjectCode(ocHead, ptr);
     }
     else
     {
         regz = getReg(rightOp);
-        ptr = newObjectCode(OC_ADD, regx, regy, regz);
+        ptr = newObjectCode(ASM_ADD, regx, regy, regz);
         addObjectCode(ocHead, ptr);
     }
     break;
@@ -506,13 +595,13 @@ void genObjectCode(InterCodePtr p)
     regy = getReg(leftOp);
     if (right == OP_IMM)
     {
-        ptr = newObjectCode(OC_ADDI, regx, regy, -rightOp->u.value);
+        ptr = newObjectCode(ASM_ADDI, regx, regy, -rightOp->u.value);
         addObjectCode(ocHead, ptr);
     }
     else
     {
         regz = getReg(rightOp);
-        ptr = newObjectCode(OC_SUB, regx, regy, regz);
+        ptr = newObjectCode(ASM_SUB, regx, regy, regz);
         addObjectCode(ocHead, ptr);
     }
     break;
@@ -526,7 +615,7 @@ void genObjectCode(InterCodePtr p)
     regx = getReg(result);
     regy = getReg(leftOp);
     regz = getReg(rightOp);
-    ptr = newObjectCode(OC_MUL, regx, regy, regz);
+    ptr = newObjectCode(ASM_MUL, regx, regy, regz);
     addObjectCode(ocHead, ptr);
     break;
 
@@ -539,41 +628,37 @@ void genObjectCode(InterCodePtr p)
     regx = getReg(result);
     regy = getReg(leftOp);
     regz = getReg(rightOp);
-    ptr = newObjectCode(OC_DIV, regy, regz);
+    ptr = newObjectCode(ASM_DIV, regy, regz);
     addObjectCode(ocHead, ptr);
-    ptr = newObjectCode(OC_MFLO, regx);
+    ptr = newObjectCode(ASM_MFLO, regx);
     addObjectCode(ocHead, ptr);
     break;
 
     case IR_RETURN:
-    regx = getReg(p->u.oneop.op);
-    ptr = newObjectCode(OC_MOVE, REG_V0, regx);
-    addObjectCode(ocHead, ptr);
-    ptr = newObjectCode(OC_JR);
-    addObjectCode(ocHead, ptr);
+    asmReturn(p);
     break;
 
     case IR_GOTO:
-    ptr = newObjectCode(OC_J, p->u.oneop.op->u.value);
+    ptr = newObjectCode(ASM_J, p->u.oneop.op->u.value);
     addObjectCode(ocHead, ptr);
     break;
 
     case IR_IF_GOTO:
     {
-        OC_Kind k;
+        ASM_Kind k;
         char* op = p->u.ifgoto.op->u.name;
         if (strEqual(op, "!="))
-            k = OC_BNE;
+            k = ASM_BNE;
         else if (strEqual(op, "=="))
-            k = OC_BEQ;
+            k = ASM_BEQ;
         else if (strEqual(op, ">"))
-            k = OC_BGT;
+            k = ASM_BGT;
         else if (strEqual(op, "<"))
-            k = OC_BLT;
+            k = ASM_BLT;
         else if (strEqual(op, "<="))
-            k = OC_BLE;
+            k = ASM_BLE;
         else if (strEqual(op, ">="))
-            k = OC_BGE;
+            k = ASM_BGE;
         leftOp = p->u.ifgoto.left;
         rightOp = p->u.ifgoto.right;
         result = p->u.ifgoto.result;
@@ -585,39 +670,40 @@ void genObjectCode(InterCodePtr p)
     }
     break;
 
-    case IR_READ://TODO:
-    // fprintf(output, "READ ");
-    // printOp(output, p->u.oneop.op);
+    case IR_READ:
+    addObjectCode(ocHead, newObjectCode(ASM_ADDI, REG_SP, REG_SP, -4));
+    addObjectCode(ocHead, newObjectCode(ASM_SW, REG_RA, 0, REG_SP));
+    addObjectCode(ocHead, newObjectCode(ASM_JAL, "read"));
+    addObjectCode(ocHead, newObjectCode(ASM_LW, REG_RA, 0, REG_SP));
+    addObjectCode(ocHead, newObjectCode(ASM_ADDI, REG_SP, REG_SP, 4));
+    regx = getReg(p->u.oneop.op);
+    addObjectCode(ocHead, newObjectCode(ASM_MOVE, regx, REG_V0));
     break;
 
-    case IR_WRITE://TODO:
-    // fprintf(output, "WRITE ");
-    // if (p->u.oneop.op->kind == OP_ADDRESS)
-    //     fprintf(output, "*");
-    // printOp(output, p->u.oneop.op);
+    case IR_WRITE:
+    regx = getReg(p->u.oneop.op);
+    addObjectCode(ocHead, newObjectCode(ASM_ADDI, REG_SP, REG_SP, -8));
+    addObjectCode(ocHead, newObjectCode(ASM_SW, REG_A0, 0, REG_SP));
+    addObjectCode(ocHead, newObjectCode(ASM_SW, REG_RA, 4, REG_SP));
+    addObjectCode(ocHead, newObjectCode(ASM_MOVE, REG_A0, regx));
+    addObjectCode(ocHead, newObjectCode(ASM_JAL, "write"));
+    addObjectCode(ocHead, newObjectCode(ASM_LW, REG_A0, 0, REG_SP));
+    addObjectCode(ocHead, newObjectCode(ASM_LW, REG_RA, 4, REG_SP));
+    addObjectCode(ocHead, newObjectCode(ASM_ADDI, REG_SP, REG_SP, 8));
     break;
 
-    case IR_CALL://TODO:
+    case IR_CALL:
     // if (p->u.assign.left->kind == OP_ADDRESS)
     //     fprintf(output, "*");
     // printOp(output, p->u.assign.left);
     // fprintf(output, " := CALL ");
     // printOp(output, p->u.assign.right);
-    ptr = newObjectCode(OC_JAL, mystrdup(p->u.assign.right->u.name));
-    addObjectCode(ocHead, ptr);
-    leftOp = p->u.assign.left;
-    regx = getReg(leftOp);
-    ptr = newObjectCode(OC_MOVE, regx, REG_V0);
-    addObjectCode(ocHead, ptr);
+    asmCall(p);
     break;
 
-    case IR_ARG://TODO:
-    // fprintf(output, "ARG ");
-    // if (p->u.oneop.op->kind == OP_STRUCT_ARR_ID)
-    //     fprintf(output, "&");
-    // else if (p->u.oneop.op->kind == OP_ADDRESS && p->u.oneop.op->isBasicAddr)
-    //     fprintf(output, "*");
-    // printOp(output, p->u.oneop.op);
+    case IR_ARG:
+    leftOp = p->u.oneop.op;
+    pushArg(leftOp);
     break;
     default:
     fprintf(stderr, RED "code type is %d\n" NORMAL, p->kind);
@@ -629,7 +715,7 @@ void genObjectCode(InterCodePtr p)
 
 void initOclist()
 {
-    ocHead = newObjectCode(OC_NONE);
+    ocHead = newObjectCode(ASM_NONE);
     ocHead->next = ocHead->prev = ocHead;
 }
 
@@ -665,91 +751,91 @@ void printObjectCode(FILE* output, ObjectCodePtr p)
 {
     switch (p->kind)
     {
-    case OC_LI:
+    case ASM_LI:
     OP_RI(li, p->li.reg, p->li.imm)
         break;
 
-    case OC_MOVE:
+    case ASM_MOVE:
     OP_RR(move, p->move.regx, p->move.regy)
         break;
 
-    case OC_FUNC:
+    case ASM_FUNC:
     fprintf(output, "%s:", p->func.funcname);
     break;
 
-    case OC_LABEL:
+    case ASM_LABEL:
     fprintf(output, "labbel%d:", p->label.x);
     break;
 
-    case OC_ADD: // add reg(x), reg(y), reg(z)
+    case ASM_ADD: // add reg(x), reg(y), reg(z)
     OP_RRR(add, p->add.regx, p->add.regy, p->add.regz)
         break;
 
-    case OC_ADDI: // addi reg(x), reg(y), k
+    case ASM_ADDI: // addi reg(x), reg(y), k
     OP_RRI(addi, p->addi.regx, p->addi.regy, p->addi.imm)
         break;
 
-    case OC_SUB: // sub reg(x), reg(y), reg(z)
+    case ASM_SUB: // sub reg(x), reg(y), reg(z)
     OP_RRR(sub, p->add.regx, p->add.regy, p->add.regz)
         break;
 
-    case OC_MUL: // mul reg(x), reg(y), reg(z)
+    case ASM_MUL: // mul reg(x), reg(y), reg(z)
     OP_RRR(mul, p->mul.regx, p->mul.regy, p->mul.regz);
     break;
 
-    case OC_DIV: // div reg(y), reg(z)
+    case ASM_DIV: // div reg(y), reg(z)
     OP_RR(div, p->div.regy, p->div.regz)
         break;
 
-    case OC_MFLO: // mflo reg(x)
+    case ASM_MFLO: // mflo reg(x)
     OP_R(mflo, p->mflo.regx)
         break;
 
-    case OC_LW: // lw reg(x), 0(reg(y))
+    case ASM_LW: // lw reg(x), 0(reg(y))
     OP_ROR(lw, p->lw.regx, p->lw.offset, p->lw.regy)
         break;
 
-    case OC_SW: // sw reg(y), 0(reg(x))
+    case ASM_SW: // sw reg(y), 0(reg(x))
     OP_ROR(sw, p->sw.regy, p->sw.offset, p->sw.regx)
         break;
 
-    case OC_J:
+    case ASM_J:
     fprintf(output, TAB"j label%d", p->j.label);
     break;
 
-    case OC_JAL:
+    case ASM_JAL:
     fprintf(output, TAB"jal %s", p->jal.f);
     break;
 
-    case OC_JR:
+    case ASM_JR:
     fprintf(output, TAB"jr $ra");
     break;
 
-    case OC_BEQ: // beq reg(x), reg(y), z
+    case ASM_BEQ: // beq reg(x), reg(y), z
     OP_RRI(beq, p->beq.regx, p->beq.regy, p->beq.z)
         break;
 
-    case OC_BNE:
+    case ASM_BNE:
     OP_RRI(bne, p->bne.regx, p->bne.regy, p->bne.z)
         break;
 
-    case OC_BGT:
+    case ASM_BGT:
     OP_RRI(bgt, p->bgt.regx, p->bgt.regy, p->bgt.z)
         break;
 
-    case OC_BLT:
+    case ASM_BLT:
     OP_RRI(blt, p->blt.regx, p->blt.regy, p->blt.z)
         break;
 
-    case OC_BGE:
+    case ASM_BGE:
     OP_RRI(bge, p->bge.regx, p->bge.regy, p->bge.z)
         break;
 
-    case OC_BLE:
+    case ASM_BLE:
     OP_RRI(ble, p->ble.regx, p->ble.regy, p->ble.z)
         break;
 
-    case OC_LA:
+    case ASM_LA:
     OP_RS(la, p->la.reg, p->la.name);
     break;
 

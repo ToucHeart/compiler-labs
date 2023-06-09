@@ -4,34 +4,34 @@
 
 typedef enum
 {
-    OC_NONE,
-    OC_FUNC,
-    OC_LABEL,
-    OC_LI,
-    OC_MOVE,
-    OC_ADD,
-    OC_ADDI,
-    OC_SUB,
-    OC_MUL,
-    OC_DIV,
-    OC_MFLO,
-    OC_LW,
-    OC_SW,
-    OC_J,
-    OC_JAL,
-    OC_JR,
-    OC_BEQ,
-    OC_BNE,
-    OC_BGT,
-    OC_BLT,
-    OC_BGE,
-    OC_BLE,
-    OC_LA,
-} OC_Kind;
+    ASM_NONE,
+    ASM_FUNC,
+    ASM_LABEL,
+    ASM_LI,
+    ASM_MOVE,
+    ASM_ADD,
+    ASM_ADDI,
+    ASM_SUB,
+    ASM_MUL,
+    ASM_DIV,
+    ASM_MFLO,
+    ASM_LW,
+    ASM_SW,
+    ASM_J,
+    ASM_JAL,
+    ASM_JR,
+    ASM_BEQ,
+    ASM_BNE,
+    ASM_BGT,
+    ASM_BLT,
+    ASM_BGE,
+    ASM_BLE,
+    ASM_LA,
+} ASM_Kind;
 
 typedef struct ObjectCode
 {
-    OC_Kind kind;
+    ASM_Kind kind;
     union
     {
         struct
@@ -124,7 +124,7 @@ typedef struct ObjectCode
 } ObjectCode;
 typedef ObjectCode* ObjectCodePtr;
 void addObjectCode(ObjectCodePtr dummyHead, ObjectCodePtr p);
-ObjectCodePtr newObjectCode(OC_Kind k, ...);
+ObjectCodePtr newObjectCode(ASM_Kind k, ...);
 
 
 typedef enum regNo
