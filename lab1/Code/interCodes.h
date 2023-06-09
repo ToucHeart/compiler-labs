@@ -26,7 +26,7 @@ typedef enum OP_Kind
     OP_NONE,
     OP_VARIABLE,
     OP_TEMP,
-    OP_CONSTANT,
+    OP_IMM,
     OP_ADDRESS,
     OP_FUNCTION,
     OP_LABEL,

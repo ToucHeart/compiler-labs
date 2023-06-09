@@ -36,7 +36,7 @@ typedef struct ObjectCode
     {
         struct
         {
-            char* x; // lebel index
+            int x; // lebel index
         } label;
         struct
         {
@@ -171,8 +171,8 @@ typedef enum regNo
 typedef struct Var
 {
     char* name;
-    int reg;
-    int offset;
+    int reg;//寄存器位置
+    int offset;//内存位置
     struct Var* prev, * next;
 } Var;
 typedef Var* VarPtr;
@@ -180,6 +180,8 @@ typedef Var* VarPtr;
 typedef struct Register
 {
     VarPtr var;
+    bool isUsed;
+    int type;
 } Register;
 
 #endif

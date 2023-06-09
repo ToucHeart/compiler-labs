@@ -17,6 +17,13 @@ int spOffset = 0;
 int curParam = 0;
 int curArg = 0;
 const int stackSize = 100;
+const int NAME_LEN = 64;
+
+char* getBuf(int size)
+{
+    char* buf = (char*)malloc(size * sizeof(char));
+    return buf;
+}
 
 ObjectCodePtr newObjectCode(OC_Kind k, ...)
 {
@@ -26,12 +33,18 @@ ObjectCodePtr newObjectCode(OC_Kind k, ...)
     va_start(ap, k);
     switch (k)
     {
+
+    case OC_MOVE:
+    p->move.regx = va_arg(ap, int);
+    p->move.regy = va_arg(ap, int);
+    break;
+
     case OC_FUNC:
     p->func.funcname = va_arg(ap, char*);
     break;
 
     case OC_LABEL:
-    p->label.x = va_arg(ap, char*);
+    p->label.x = va_arg(ap, int);
     break;
 
     case OC_LI:
@@ -181,6 +194,7 @@ void freeVars()
     {
         VarPtr del = p;
         p = p->next;
+        free(del->name);
         free(del);
     }
     free(varList);
@@ -252,66 +266,123 @@ void initRegs()
 {
     for (int i = 0; i < REG_NUM;++i)
     {
+        regs[i].isUsed = false;
+        regs[i].type = OP_NONE;
         regs[i].var = NULL;
     }
 }
 
-void lwReg(int index, VarPtr var)
+void lwVar2Reg(int index, VarPtr var)
 {
     ObjectCodePtr ptr = newObjectCode(OC_LW, index, var->offset, REG_FP);
     addObjectCode(ocHead, ptr);
 }
 
-int getReg(OperandPtr p)
+VarPtr getVar(OperandPtr p)
 {
-    char* name = malloc(40 * sizeof(char));
+    char* name = getBuf(NAME_LEN);
     if (p->kind == OP_TEMP || p->kind == OP_ADDRESS)
     {
         sprintf(name, "t%d", p->u.value);
     }
     else if (p->kind == OP_VARIABLE)
     {
-        free(name);
-        name = p->u.name;
-    }
-    int i = curReg++;
-    if (curReg == MAX_AVAIL_REG)
-    {
-        curReg = MIN_AVAIL_REG;
-    }
-    if (p->kind == OP_CONSTANT)
-    {
-        ObjectCodePtr ptr = newObjectCode(OC_LI, i, p->u.value);
-        addObjectCode(ocHead, ptr);
-        return i;
+        strcpy(name, p->u.name);
     }
     VarPtr var = findVar(name);
-    if (var == NULL)
+    if (NULL == var)//不在变量表中
     {
         var = newVar();
-        var->name = name;
-        var->reg = i;
-        spOffset -= 4;
-        var->offset = spOffset;
-        addVar(var);
-        regs[i].var = var;
+        var->name = mystrdup(name);
+        var->reg = REG_ZERO;//不在寄存器
+        if (p->kind == OP_VARIABLE)
+        {
+            spOffset -= 4;
+            var->offset = spOffset;
+        }
+        addVar(var);//加入变量表中
+    }
+    free(name);
+    return var;
+}
+
+void swReg2Mem(int regIdx)
+{
+    VarPtr var = regs[regIdx].var;
+    var->reg = REG_ZERO;
+    ObjectCodePtr ptr = newObjectCode(OC_SW, regIdx, var->offset, REG_FP);
+    addObjectCode(ocHead, ptr);
+}
+
+/*
+* 如果y已经在某个寄存器中，不需要进行处理，选择这个寄存器作为Ry
+* 如果y不在寄存器中，且有空闲寄存器，选择一个空闲寄存器作为Ry
+*/
+int getReg(OperandPtr p)
+{
+    VarPtr var = NULL;
+    if (p->kind != OP_IMM)
+    {
+        var = getVar(p);
+        if (var->reg != REG_ZERO)
+            return var->reg;
+    }
+    else if (p->u.value == 0) //p is a immediate number
+    {
+        return REG_ZERO;
+    }
+    //找一个寄存器
+    int target = 0;
+    for (int i = MIN_AVAIL_REG;i < MAX_AVAIL_REG;++i)
+    {
+        if (regs[i].isUsed == false)//空闲寄存器,或者寄存器中是一个imm
+        {
+            target = i;
+            break;
+        }
+    }
+    if (target == 0)
+    {
+        for (int i = MIN_AVAIL_REG;i < MAX_AVAIL_REG;i++)
+        {
+            if (regs[i].type == OP_VARIABLE)
+            {
+                target = i;
+                break;
+            }
+        }
+        swReg2Mem(target);
+    }
+    if (p->kind != OP_IMM)
+    {
+        var->reg = target;
+        regs[target].var = var;
     }
     else
     {
-        var->reg = i;
-        regs[i].var = var;
-        lwReg(i, var);
+        ObjectCodePtr ptr = newObjectCode(OC_LI, target, p->u.value);
+        addObjectCode(ocHead, ptr);
     }
-    return i;
+    regs[target].type = p->kind;
+    regs[target].isUsed = true;
+    return target;
 }
 
-void swReg(int regIdx)
+void resetReg(int reg)
 {
-#if 0
-    VarPtr var = regs[regIdx].var;
-    ObjectCodePtr ptr = newObjectCode(OC_SW, regIdx, var->offset, REG_FP);
-    addObjectCode(ocHead, ptr);
-#endif
+    if (regs[reg].type == OP_IMM)
+    {
+        regs[reg].isUsed = false;
+        regs[reg].type = OP_NONE;
+        regs[reg].var = NULL;
+    }
+}
+
+void resetRegs(int regx, int regy, int regz)
+{
+    resetReg(regx);
+    resetReg(regy);
+    resetReg(regz);
 }
 
 void genObjectCode(InterCodePtr p)
@@ -329,7 +400,7 @@ void genObjectCode(InterCodePtr p)
     break;
 
     case IR_LABEL:
-    ptr = newObjectCode(OC_LABEL, mystrdup(p->u.oneop.op->u.name));
+    ptr = newObjectCode(OC_LABEL, p->u.oneop.op->u.value);
     addObjectCode(ocHead, ptr);
     break;
 
@@ -345,10 +416,10 @@ void genObjectCode(InterCodePtr p)
     case IR_ASSIGN:
     leftOp = p->u.assign.left;
     rightOp = p->u.assign.right;
-    if (p->u.assign.right->kind == OP_CONSTANT)//x := k
+    if (rightOp->kind == OP_IMM)//x := k
     {
         regx = getReg(leftOp);
-        ptr = newObjectCode(OC_LI, regx, p->u.assign.right->u.value);
+        ptr = newObjectCode(OC_LI, regx, rightOp->u.value);
         addObjectCode(ocHead, ptr);
     }
     else                                       //x := y
@@ -358,7 +429,6 @@ void genObjectCode(InterCodePtr p)
         ptr = newObjectCode(OC_MOVE, regx, regy);
         addObjectCode(ocHead, ptr);
     }
-    swReg(regx);
     break;
 
     case IR_GET_ADDR: // 将地址赋给临时变量
@@ -383,7 +453,7 @@ void genObjectCode(InterCodePtr p)
     rightOp = p->u.assign.right;
     regx = getReg(leftOp);
     regy = getReg(rightOp);
-    if (rightOp->kind == OP_CONSTANT)//*x := k
+    if (rightOp->kind == OP_IMM)//*x := k
     {
         ptr = newObjectCode(OC_LI, regy, rightOp->u.value);
         addObjectCode(ocHead, ptr);
@@ -411,17 +481,11 @@ void genObjectCode(InterCodePtr p)
     rightOp = p->u.binop.right;
     left = leftOp->kind;
     right = rightOp->kind;
-    if (left == OP_CONSTANT)
-    {
-        regy = getReg(leftOp);
-        ptr = newObjectCode(OC_LI, regy, p->u.binop.left->u.value);
-        addObjectCode(ocHead, ptr);
-    }
     regx = getReg(result);
     regy = getReg(leftOp);
-    if (right == OP_CONSTANT)
+    if (right == OP_IMM)
     {
-        ptr = newObjectCode(OC_ADDI, regx, regy, p->u.binop.right->u.value);
+        ptr = newObjectCode(OC_ADDI, regx, regy, rightOp->u.value);
         addObjectCode(ocHead, ptr);
     }
     else
@@ -430,7 +494,6 @@ void genObjectCode(InterCodePtr p)
         ptr = newObjectCode(OC_ADD, regx, regy, regz);
         addObjectCode(ocHead, ptr);
     }
-    swReg(regx);
     break;
 
     case IR_SUB:
@@ -439,17 +502,11 @@ void genObjectCode(InterCodePtr p)
     rightOp = p->u.binop.right;
     left = leftOp->kind;
     right = rightOp->kind;
-    if (left == OP_CONSTANT)
-    {
-        regy = getReg(leftOp);
-        ptr = newObjectCode(OC_LI, regy, p->u.binop.left->u.value);
-        addObjectCode(ocHead, ptr);
-    }
     regx = getReg(result);
     regy = getReg(leftOp);
-    if (right == OP_CONSTANT)
+    if (right == OP_IMM)
     {
-        ptr = newObjectCode(OC_ADDI, regx, regy, -p->u.binop.right->u.value);
+        ptr = newObjectCode(OC_ADDI, regx, regy, -rightOp->u.value);
         addObjectCode(ocHead, ptr);
     }
     else
@@ -458,7 +515,6 @@ void genObjectCode(InterCodePtr p)
         ptr = newObjectCode(OC_SUB, regx, regy, regz);
         addObjectCode(ocHead, ptr);
     }
-    swReg(regx);
     break;
 
     case IR_MUL:
@@ -470,19 +526,8 @@ void genObjectCode(InterCodePtr p)
     regx = getReg(result);
     regy = getReg(leftOp);
     regz = getReg(rightOp);
-    if (left == OP_CONSTANT)
-    {
-        ptr = newObjectCode(OC_LI, regy, p->u.binop.left->u.value);
-        addObjectCode(ocHead, ptr);
-    }
-    if (right == OP_CONSTANT)
-    {
-        ptr = newObjectCode(OC_LI, regz, p->u.binop.right->u.value);
-        addObjectCode(ocHead, ptr);
-    }
     ptr = newObjectCode(OC_MUL, regx, regy, regz);
     addObjectCode(ocHead, ptr);
-    swReg(regx);
     break;
 
     case IR_DIV:
@@ -494,21 +539,10 @@ void genObjectCode(InterCodePtr p)
     regx = getReg(result);
     regy = getReg(leftOp);
     regz = getReg(rightOp);
-    if (left == OP_CONSTANT)
-    {
-        ptr = newObjectCode(OC_LI, regy, p->u.binop.left->u.value);
-        addObjectCode(ocHead, ptr);
-    }
-    if (right == OP_CONSTANT)
-    {
-        ptr = newObjectCode(OC_LI, regz, p->u.binop.right->u.value);
-        addObjectCode(ocHead, ptr);
-    }
     ptr = newObjectCode(OC_DIV, regy, regz);
     addObjectCode(ocHead, ptr);
     ptr = newObjectCode(OC_MFLO, regx);
     addObjectCode(ocHead, ptr);
-    swReg(regx);
     break;
 
     case IR_RETURN:
@@ -590,6 +624,7 @@ void genObjectCode(InterCodePtr p)
     assert(0);
     break;
     }
+    resetRegs(regx, regy, regz);
 }
 
 void initOclist()
@@ -616,7 +651,8 @@ void genObjectCodes()
     }
 }
 
-#define STR(x) "  " #x
+#define TAB "  "
+#define STR(x) TAB #x
 #define OP_RRR(instr, r1, r2, r3) fprintf(output, STR(instr) " %s, %s, %s", REG(r1), REG(r2), REG(r3));
 #define OP_RRI(instr, r1, r2, imm) fprintf(output, STR(instr) " %s, %s, %d", REG(r1), REG(r2), imm);
 #define OP_RR(instr, r1, r2) fprintf(output, STR(instr) " %s, %s", REG(r1), REG(r2));
@@ -642,7 +678,7 @@ void printObjectCode(FILE* output, ObjectCodePtr p)
     break;
 
     case OC_LABEL:
-    fprintf(output, "%s", p->label.x);
+    fprintf(output, "labbel%d:", p->label.x);
     break;
 
     case OC_ADD: // add reg(x), reg(y), reg(z)
@@ -678,15 +714,15 @@ void printObjectCode(FILE* output, ObjectCodePtr p)
         break;
 
     case OC_J:
-    fprintf(output, "j label%d", p->j.label);
+    fprintf(output, TAB"j label%d", p->j.label);
     break;
 
     case OC_JAL:
-    fprintf(output, "jal %s", p->jal.f);
+    fprintf(output, TAB"jal %s", p->jal.f);
     break;
 
     case OC_JR:
-    fprintf(output, "jr $ra");
+    fprintf(output, TAB"jr $ra");
     break;
 
     case OC_BEQ: // beq reg(x), reg(y), z

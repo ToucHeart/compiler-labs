@@ -38,8 +38,6 @@ void setOpName(OperandPtr op, char* name)
 {
     if (op == NULL)
         return;
-    if (op->u.name != NULL)
-        free(op->u.name);
     op->u.name = name;
 }
 
@@ -361,7 +359,7 @@ void translate_Cond(Node* node, OperandPtr label_true, OperandPtr label_false)
     */
     OperandPtr t1 = newTemp();
     OperandPtr op = newOperand(OP_RELOP, mystrdup("!="));
-    OperandPtr zero = newOperand(OP_CONSTANT, NULL);
+    OperandPtr zero = newOperand(OP_IMM, NULL);
     translateExp(node, t1);
     addInterCodes(newInterCodes(newInterCode(IR_IF_GOTO, t1, op, zero, label_true)));
     addInterCodes(newInterCodes(newInterCode(IR_GOTO, label_false)));
@@ -443,7 +441,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
         }
         else if (strEqual(firstname, "INT"))
         {
-            setOpKind(place, OP_CONSTANT);
+            setOpKind(place, OP_IMM);
             setOpVal(place, first->val.int_val);
         }
         else
@@ -490,7 +488,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
                     if (strEqual(funcname->name, "write"))
                     {
                         addInterCodes(newInterCodes(newInterCode(IR_WRITE, arg_list->head->arg)));
-                        OperandPtr zero = newOperand(OP_CONSTANT, NULL);
+                        OperandPtr zero = newOperand(OP_IMM, NULL);
                         addInterCodes(newInterCodes(newInterCode(IR_ASSIGN, place, zero)));
                     }
                     else
@@ -544,7 +542,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
                 addInterCodes(newInterCodes(newInterCode(type, rightCur, right))); // 取地址
 
                 int w = getArrEleWidth(lhs);
-                OperandPtr one = newOperand(OP_CONSTANT, int2cptr(w)); // 得到元素宽度
+                OperandPtr one = newOperand(OP_IMM, int2cptr(w)); // 得到元素宽度
 
                 addInterCodes(newInterCodes(newInterCode(IR_READ_WRITE_ADDR, leftCur, rightCur))); // 赋值
                 for (int i = 1; i < num; ++i)
@@ -565,7 +563,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
         }
         else if (strEqual(firstname, "MINUS"))
         {
-            OperandPtr zero = newOperand(OP_CONSTANT, NULL);
+            OperandPtr zero = newOperand(OP_IMM, NULL);
             OperandPtr right = newTemp();
             translateExp(second, right);
             InterCodePtr code = newInterCode(IR_SUB, place, zero, right);
@@ -618,8 +616,8 @@ Symbol* translateExp(Node* node, OperandPtr place)
             return code0 + code1 + code2 + [LABEL label2]
             */
             OperandPtr label1 = newLabel(), label2 = newLabel();
-            OperandPtr zero = newOperand(OP_CONSTANT, NULL);
-            OperandPtr one = newOperand(OP_CONSTANT, (char*)1);
+            OperandPtr zero = newOperand(OP_IMM, NULL);
+            OperandPtr one = newOperand(OP_IMM, (char*)1);
             addInterCodes(newInterCodes(newInterCode(IR_ASSIGN, place, zero)));
             translate_Cond(node, label1, label2);
             addInterCodes(newInterCodes(newInterCode(IR_LABEL, label1)));
@@ -643,7 +641,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
 
             Symbol* target;
             int offset = getStructEleOffset(location, third->val.str, &target); // 得到在结构体中的偏移量
-            OperandPtr off = newOperand(OP_CONSTANT, int2cptr(offset));
+            OperandPtr off = newOperand(OP_IMM, int2cptr(offset));
             if (target->type->kind == TYPE_BASIC)
             {
                 place->isBasicAddr = true;
@@ -676,7 +674,7 @@ Symbol* translateExp(Node* node, OperandPtr place)
             OperandPtr idx = newTemp();
             translateExp(third, idx); // 得到下标
 
-            OperandPtr width = newOperand(OP_CONSTANT, NULL);
+            OperandPtr width = newOperand(OP_IMM, NULL);
             setOpVal(width, getArrEleWidth(location)); // 得到数组元素宽度
 
             OperandPtr offset = newTemp();
@@ -915,17 +913,17 @@ void printOp(FILE* output, OperandPtr op)
 {
     switch (op->kind)
     {
-    case OP_CONSTANT:
+    case OP_IMM:
     fprintf(output, "#%d", op->u.value);
     break;
     case OP_LABEL:
     fprintf(output, "label%d", op->u.value);
     break;
+    case OP_ADDRESS:
     case OP_TEMP:
     fprintf(output, "t%d", op->u.value);
     break;
     case OP_STRUCT_ARR_ID:
-    case OP_ADDRESS:
     case OP_VARIABLE:
     case OP_FUNCTION:
     case OP_RELOP:
