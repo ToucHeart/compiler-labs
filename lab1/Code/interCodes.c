@@ -62,9 +62,8 @@ OperandPtr newLabel()
 
 OperandPtr newTemp()
 {
-    char tempname[10];
-    sprintf(tempname, "t%d", list.tmpIndex++);
-    OperandPtr temp = newOperand(OP_TEMP, mystrdup(tempname));
+    OperandPtr temp = newOperand(OP_TEMP, int2cptr(list.tmpIndex));
+    ++list.tmpIndex;
     return temp;
 }
 
@@ -923,6 +922,8 @@ void printOp(FILE* output, OperandPtr op)
     fprintf(output, "label%d", op->u.value);
     break;
     case OP_TEMP:
+    fprintf(output, "t%d", op->u.value);
+    break;
     case OP_STRUCT_ARR_ID:
     case OP_ADDRESS:
     case OP_VARIABLE:

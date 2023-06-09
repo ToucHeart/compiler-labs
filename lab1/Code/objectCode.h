@@ -173,7 +173,7 @@ typedef struct Var
     char* name;
     int reg;
     int offset;
-    struct Var* next;
+    struct Var* prev, * next;
 } Var;
 typedef Var* VarPtr;
 

@@ -8,7 +8,14 @@ extern void semanticAnalyse();
 extern void genInterCodes();
 extern void printInterCodes(FILE* output);
 extern void printObjectCodes(FILE* output);
-extern void genObjectCode();
+extern void genObjectCodes();
+extern void freeVars();
+
+void freeAll()
+{
+    freeMemory();
+    freeVars();
+}
 
 int main(int argc, char* argv[])
 {
@@ -46,9 +53,9 @@ int main(int argc, char* argv[])
         semanticAnalyse();
         genInterCodes();
         printInterCodes(irfile);
-        genObjectCode();
+        genObjectCodes();
         printObjectCodes(ocfile);
     }
-    freeMemory();
+    freeAll();
     return 0;
 }

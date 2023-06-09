@@ -8,8 +8,15 @@
 
 extern InterCodesList list;
 static ObjectCodePtr ocHead;
+static VarPtr varList;
 
 static Register regs[REG_NUM];
+
+int curReg = MIN_AVAIL_REG;
+int spOffset = 0;
+int curParam = 0;
+int curArg = 0;
+const int stackSize = 100;
 
 ObjectCodePtr newObjectCode(OC_Kind k, ...)
 {
@@ -128,6 +135,27 @@ ObjectCodePtr newObjectCode(OC_Kind k, ...)
     return p;
 }
 
+VarPtr newVar()
+{
+    VarPtr p = (VarPtr)malloc(sizeof(Var));
+    memset(p, 0, sizeof(Var));
+    return p;
+}
+
+VarPtr findVar(const char* name)
+{
+    VarPtr p = varList->next;
+    while (p != varList)
+    {
+        if (strEqual(name, p->name))
+        {
+            return p;
+        }
+        p = p->next;
+    }
+    return NULL;
+}
+
 void addObjectCode(ObjectCodePtr dummyHead, ObjectCodePtr p)
 {
     if (dummyHead->next == dummyHead)
@@ -143,6 +171,36 @@ void addObjectCode(ObjectCodePtr dummyHead, ObjectCodePtr p)
         p->prev = dummyHead->prev;
         dummyHead->prev = p;
         p->next = dummyHead;
+    }
+}
+
+void freeVars()
+{
+    VarPtr p = varList->next;
+    while (p != varList)
+    {
+        VarPtr del = p;
+        p = p->next;
+        free(del);
+    }
+    free(varList);
+}
+
+void addVar(VarPtr p)
+{
+    if (varList->next == varList)
+    {
+        varList->next = p;
+        p->prev = varList;
+        varList->prev = p;
+        p->next = varList;
+    }
+    else
+    {
+        varList->prev->next = p;
+        p->prev = varList->prev;
+        varList->prev = p;
+        p->next = varList;
     }
 }
 
@@ -198,19 +256,65 @@ void initRegs()
     }
 }
 
+void lwReg(int index, VarPtr var)
+{
+    ObjectCodePtr ptr = newObjectCode(OC_LW, index, var->offset, REG_FP);
+    addObjectCode(ocHead, ptr);
+}
+
 int getReg(OperandPtr p)
 {
-    return 0;
+    char* name = malloc(40 * sizeof(char));
+    if (p->kind == OP_TEMP || p->kind == OP_ADDRESS)
+    {
+        sprintf(name, "t%d", p->u.value);
+    }
+    else if (p->kind == OP_VARIABLE)
+    {
+        free(name);
+        name = p->u.name;
+    }
+    int i = curReg++;
+    if (curReg == MAX_AVAIL_REG)
+    {
+        curReg = MIN_AVAIL_REG;
+    }
+    if (p->kind == OP_CONSTANT)
+    {
+        ObjectCodePtr ptr = newObjectCode(OC_LI, i, p->u.value);
+        addObjectCode(ocHead, ptr);
+        return i;
+    }
+    VarPtr var = findVar(name);
+    if (var == NULL)
+    {
+        var = newVar();
+        var->name = name;
+        var->reg = i;
+        spOffset -= 4;
+        var->offset = spOffset;
+        addVar(var);
+        regs[i].var = var;
+    }
+    else
+    {
+        var->reg = i;
+        regs[i].var = var;
+        lwReg(i, var);
+    }
+    return i;
 }
 
 void swReg(int regIdx)
 {
+#if 0
     VarPtr var = regs[regIdx].var;
     ObjectCodePtr ptr = newObjectCode(OC_SW, regIdx, var->offset, REG_FP);
     addObjectCode(ocHead, ptr);
+#endif
 }
 
-void genCode(InterCodePtr p)
+void genObjectCode(InterCodePtr p)
 {
     ObjectCodePtr ptr = NULL;
     int regx = 0, regy = 0, regz = 0;
@@ -494,18 +598,25 @@ void initOclist()
     ocHead->next = ocHead->prev = ocHead;
 }
 
-void genObjectCode()
+void initVarList()
+{
+    varList = newVar();
+    varList->prev = varList->next = varList;
+}
+
+void genObjectCodes()
 {
     initOclist();
+    initVarList();
     InterCodesPtr p = list.dummyHead->next;
     while (p != list.dummyHead)
     {
-        genCode(p->code);
+        genObjectCode(p->code);
         p = p->next;
     }
 }
 
-#define STR(x) #x
+#define STR(x) "  " #x
 #define OP_RRR(instr, r1, r2, r3) fprintf(output, STR(instr) " %s, %s, %s", REG(r1), REG(r2), REG(r3));
 #define OP_RRI(instr, r1, r2, imm) fprintf(output, STR(instr) " %s, %s, %d", REG(r1), REG(r2), imm);
 #define OP_RR(instr, r1, r2) fprintf(output, STR(instr) " %s, %s", REG(r1), REG(r2));
