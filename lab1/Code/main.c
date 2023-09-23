@@ -19,14 +19,14 @@ void freeAll()
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3)
+    if (argc != 2)
     {
-        fprintf(stderr, "pass 3 arguments\n");
+        fprintf(stderr, "pass 2 arguments\n");
         return 1;
     }
     FILE* input = fopen(argv[1], "r");
-    FILE* ocfile = fopen(argv[2], "w+");
-    FILE* irfile = fopen("../Test/test.ir", "w+");
+    FILE* ocfile = fopen("./output.s", "w+");
+    FILE* irfile = fopen("./test.ir", "w+");
     if (!input)
     {
         perror(argv[1]);
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     }
     if (!irfile)
     {
-        perror("out.ir not exists\n");
+        perror("ir not exists\n");
         return 1;
     }
     setbuf(stdout, NULL);
