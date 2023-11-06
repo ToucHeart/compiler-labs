@@ -26,7 +26,6 @@ int main(int argc, char* argv[])
     }
     FILE* input = fopen(argv[1], "r");
     FILE* ocfile = fopen(argv[2], "w+");
-    FILE* irfile = fopen("../Test/test.ir", "w+");
     if (!input)
     {
         perror(argv[1]);
@@ -37,13 +36,16 @@ int main(int argc, char* argv[])
         perror(argv[2]);
         return 1;
     }
+#if SUBMIT
+    // FILE* irfile = fopen("../Test/test.ir", "w+");
     if (!irfile)
     {
         perror("out.ir not exists\n");
         return 1;
     }
-    setbuf(stdout, NULL);
     setbuf(irfile, NULL);
+#endif
+    setbuf(stdout, NULL);
     setbuf(ocfile, NULL);
     yyrestart(input);
     yyparse();
@@ -52,7 +54,9 @@ int main(int argc, char* argv[])
         // printTree();
         semanticAnalyse();
         genInterCodes();
+#if SUBMIT
         printInterCodes(irfile);
+#endif
         genObjectCodes();
         printObjectCodes(ocfile);
     }
