@@ -741,6 +741,7 @@ void genObjectCodes()
 #define STR(x) TAB #x
 #define OP_RRR(instr, r1, r2, r3) fprintf(output, STR(instr) " %s, %s, %s", REG(r1), REG(r2), REG(r3));
 #define OP_RRI(instr, r1, r2, imm) fprintf(output, STR(instr) " %s, %s, %d", REG(r1), REG(r2), imm);
+#define OP_RRL(instr, r1, r2, l) fprintf(output, STR(instr) " %s, %s, label%d", REG(r1), REG(r2), l);
 #define OP_RR(instr, r1, r2) fprintf(output, STR(instr) " %s, %s", REG(r1), REG(r2));
 #define OP_R(instr, r1) fprintf(output, STR(instr) " %s", REG(r1));
 #define OP_ROR(instr, r1, offset, r2) fprintf(output, STR(instr) " %s, %d(%s)", REG(r1), offset, REG(r2));
@@ -764,7 +765,7 @@ void printObjectCode(FILE* output, ObjectCodePtr p)
     break;
 
     case ASM_LABEL:
-    fprintf(output, "labbel%d:", p->label.x);
+    fprintf(output, "label%d:", p->label.x);
     break;
 
     case ASM_ADD: // add reg(x), reg(y), reg(z)
@@ -812,27 +813,27 @@ void printObjectCode(FILE* output, ObjectCodePtr p)
     break;
 
     case ASM_BEQ: // beq reg(x), reg(y), z
-    OP_RRI(beq, p->beq.regx, p->beq.regy, p->beq.z)
+    OP_RRL(beq, p->beq.regx, p->beq.regy, p->beq.z)
         break;
 
     case ASM_BNE:
-    OP_RRI(bne, p->bne.regx, p->bne.regy, p->bne.z)
+    OP_RRL(bne, p->bne.regx, p->bne.regy, p->bne.z)
         break;
 
     case ASM_BGT:
-    OP_RRI(bgt, p->bgt.regx, p->bgt.regy, p->bgt.z)
+    OP_RRL(bgt, p->bgt.regx, p->bgt.regy, p->bgt.z)
         break;
 
     case ASM_BLT:
-    OP_RRI(blt, p->blt.regx, p->blt.regy, p->blt.z)
+    OP_RRL(blt, p->blt.regx, p->blt.regy, p->blt.z)
         break;
 
     case ASM_BGE:
-    OP_RRI(bge, p->bge.regx, p->bge.regy, p->bge.z)
+    OP_RRL(bge, p->bge.regx, p->bge.regy, p->bge.z)
         break;
 
     case ASM_BLE:
-    OP_RRI(ble, p->ble.regx, p->ble.regy, p->ble.z)
+    OP_RRL(ble, p->ble.regx, p->ble.regy, p->ble.z)
         break;
 
     case ASM_LA:
